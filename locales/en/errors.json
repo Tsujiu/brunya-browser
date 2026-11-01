@@ -1,0 +1,11 @@
+{
+  "connection_failed": "Unable to connect to the server",
+  "dns_lookup_failed": "Server address not found (DNS lookup failed)",
+  "cert_invalid": "Security certificate is invalid or untrusted",
+  "cert_expired": "The security certificate for this site has expired",
+  "connection_refused": "Connection refused by the server",
+  "timed_out": "The connection timed out",
+  "blocked_by_adblock": "Request blocked by BEAR Shield",
+  "process_crashed": "The web page process crashed unexpectedly",
+  "reload_page": "Reload Page"
+}

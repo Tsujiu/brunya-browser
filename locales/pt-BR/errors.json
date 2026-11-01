@@ -1,0 +1,11 @@
+{
+  "connection_failed": "Não foi possível conectar ao servidor",
+  "dns_lookup_failed": "Endereço do servidor não encontrado (falha de DNS)",
+  "cert_invalid": "Certificado de segurança inválido ou não confiável",
+  "cert_expired": "O certificado de segurança deste site expirou",
+  "connection_refused": "Conexão recusada pelo servidor",
+  "timed_out": "O tempo limite de conexão foi atingido",
+  "blocked_by_adblock": "Requisição bloqueada pelo Escudo do BEAR",
+  "process_crashed": "O processo desta página foi encerrado inesperadamente",
+  "reload_page": "Recarregar Página"
+}

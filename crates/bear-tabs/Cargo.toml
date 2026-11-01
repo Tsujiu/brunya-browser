@@ -1,0 +1,18 @@
+[package]
+name = "bear-tabs"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Gerenciador inteligente de abas e suspensão de memória do BEAR Browser"
+
+[dependencies]
+bear-core.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+parking_lot.workspace = true
+
+[dev-dependencies]
