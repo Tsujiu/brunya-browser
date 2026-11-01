@@ -1,0 +1,20 @@
+{
+  "general": "Geral",
+  "appearance": "Aparência",
+  "theme": "Tema",
+  "theme_system": "Padrão do Sistema",
+  "theme_light": "Claro",
+  "theme_dark": "Escuro",
+  "language": "Idioma",
+  "search_engine": "Mecanismo de Pesquisa",
+  "tab_suspension": "Economia de Memória e Suspensão de Abas",
+  "tab_suspension_desc": "Suspender abas em segundo plano após período de inatividade para economizar RAM.",
+  "tab_suspension_timeout": "Tempo para suspender",
+  "minutes": "{count} minutos",
+  "privacy_and_security": "Privacidade e Segurança",
+  "adblock_filter_lists": "Listas de Filtros de Anúncios",
+  "update_filters_now": "Atualizar listas de filtros agora",
+  "about_title": "Sobre o BEAR Browser",
+  "version": "Versão {version}",
+  "license": "Código Aberto sob Licença Apache-2.0"
+}

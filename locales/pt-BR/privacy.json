@@ -1,0 +1,23 @@
+{
+  "shield_title": "Escudo de Privacidade BEAR",
+  "shield_status_enabled": "Proteção ativa",
+  "shield_status_disabled": "Proteção pausada para este site",
+  "blocked_trackers_count": "{count} rastreadores e anúncios bloqueados",
+  "protection_mode": "Modo de Proteção",
+  "mode_balanced": "Balanceado (Recomendado)",
+  "mode_strict": "Rigoroso (Maior privacidade)",
+  "mode_custom": "Personalizado",
+  "cookies_blocked": "Cookies de terceiros bloqueados",
+  "fingerprint_protection": "Proteção contra impressão digital (Fingerprinting)",
+  "clear_browsing_data": "Limpar Dados de Navegação",
+  "clear_cache": "Limpar Cache",
+  "clear_cookies": "Limpar Cookies",
+  "site_permissions": "Permissões do Site",
+  "camera": "Câmera",
+  "microphone": "Microfone",
+  "location": "Localização",
+  "notifications": "Notificações",
+  "permission_ask": "Perguntar",
+  "permission_allow": "Permitir",
+  "permission_block": "Bloquear"
+}

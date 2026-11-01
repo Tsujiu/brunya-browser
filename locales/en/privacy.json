@@ -1,0 +1,23 @@
+{
+  "shield_title": "BEAR Privacy Shield",
+  "shield_status_enabled": "Protection active",
+  "shield_status_disabled": "Protection paused for this site",
+  "blocked_trackers_count": "{count} trackers and ads blocked",
+  "protection_mode": "Protection Mode",
+  "mode_balanced": "Balanced (Recommended)",
+  "mode_strict": "Strict (Maximum privacy)",
+  "mode_custom": "Custom",
+  "cookies_blocked": "Third-party cookies blocked",
+  "fingerprint_protection": "Fingerprinting protection",
+  "clear_browsing_data": "Clear Browsing Data",
+  "clear_cache": "Clear Cache",
+  "clear_cookies": "Clear Cookies",
+  "site_permissions": "Site Permissions",
+  "camera": "Camera",
+  "microphone": "Microphone",
+  "location": "Location",
+  "notifications": "Notifications",
+  "permission_ask": "Ask",
+  "permission_allow": "Allow",
+  "permission_block": "Block"
+}
