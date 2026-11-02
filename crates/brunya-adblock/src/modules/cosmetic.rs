@@ -7,8 +7,9 @@ impl CosmeticFilter {
     pub fn default_cosmetic_stylesheet() -> &'static str {
         r#"
         /* Ocultação de banners e blocos publicitários */
-        .ad, .ads, .advertisement, [id^="google_ads_"], [class*="sponsored-post"],
-        [data-ad-client], .dfp-ad, .ad-banner, .banner-ad,
+        .ad, .ads, .advertisement, .adbox, .banner_ads, .adsbox, [id^="google_ads_"],
+        [class*="sponsored-post"], [class*="banner_ads"], [class*="adsbox"],
+        [data-ad-client], .dfp-ad, .ad-banner, .banner-ad, #pagead, #ad-container,
         /* Ocultação de sobreposições intrusivas de newsletter e avisos de cookies forçados */
         .cookie-notice-banner, .gdpr-modal-overlay, .newsletter-signup-overlay {
             display: none !important;

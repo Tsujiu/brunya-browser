@@ -83,7 +83,7 @@ impl WebView {
             ));
         }
 
-        // Injetar filtros cosméticos nativos do BruNya Shield (Módulos 01 e 05) via UserContentManager
+        // Injetar filtros cosméticos nativos e filtro de conteúdo WebKit (bloqueio de subrecursos e rastreadores)
         if let Some(content_manager) = webkit_view.user_content_manager() {
             let css = brunya_adblock::CosmeticFilter::default_cosmetic_stylesheet();
             let user_style = webkit6::UserStyleSheet::new(
@@ -94,6 +94,24 @@ impl WebView {
                 &[],
             );
             content_manager.add_style_sheet(&user_style);
+
+            // Compilar e registrar o filtro de conteúdo nativo do WebKit
+            let home = std::env::var("HOME").unwrap_or_default();
+            let filter_store_path = format!("{}/.local/share/brunya/filters/webkit", home);
+            std::fs::create_dir_all(&filter_store_path).ok();
+
+            let filter_store = webkit6::UserContentFilterStore::new(&filter_store_path);
+            let rules_bytes = glib::Bytes::from_static(include_bytes!(
+                "../../../../crates/brunya-adblock/resources/adblock_rules.json"
+            ));
+
+            let cm_clone = content_manager.clone();
+            filter_store.save("brunya_shield_rules", &rules_bytes, None::<&gio::Cancellable>, move |res| {
+                if let Ok(filter) = res {
+                    cm_clone.add_filter(&filter);
+                    info!("BruNya Shield ativou o filtro de conteúdo nativo do WebKit com sucesso");
+                }
+            });
         }
 
         let default_start = if is_private { "brunya://private" } else { "brunya://newtab" };
