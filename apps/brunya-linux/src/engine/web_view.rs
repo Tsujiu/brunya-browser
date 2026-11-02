@@ -95,6 +95,17 @@ impl WebView {
             );
             content_manager.add_style_sheet(&user_style);
 
+            // Injetar scriptlet nativo de bloqueio de anúncios e telemetria do YouTube (Módulo 10)
+            let yt_script_code = include_str!("../../../../crates/brunya-adblock/resources/youtube_adblock.js");
+            let yt_user_script = webkit6::UserScript::new(
+                yt_script_code,
+                webkit6::UserContentInjectedFrames::AllFrames,
+                webkit6::UserScriptInjectionTime::Start,
+                &["*://*.youtube.com/*", "*://youtube.com/*"],
+                &[],
+            );
+            content_manager.add_script(&yt_user_script);
+
             // Compilar e registrar o filtro de conteúdo nativo do WebKit
             let home = std::env::var("HOME").unwrap_or_default();
             let filter_store_path = format!("{}/.local/share/brunya/filters/webkit", home);
