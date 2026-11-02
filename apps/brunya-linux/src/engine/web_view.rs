@@ -13,6 +13,7 @@ use std::sync::Arc;
 use tracing::{info, warn};
 use webkit6::prelude::*;
 use webkit6::{LoadEvent, NetworkSession, WebView as WebKitWebView};
+use crate::engine::FaviconManager;
 
 pub struct WebView {
     pub container: GtkBox,
@@ -140,6 +141,22 @@ impl WebView {
                     state.can_go_forward = v.can_go_forward();
                     (this.on_state_changed)(&state);
 
+                    // Atualizar favicon do site automaticamente
+                    if let Some(domain) = FaviconManager::extract_domain(&uri) {
+                        if let Some(tex) = FaviconManager::load_cached_favicon(&domain) {
+                            *this.current_favicon.borrow_mut() = Some(tex);
+                        } else {
+                            let this_f = Rc::downgrade(&this);
+                            FaviconManager::fetch_favicon_async(domain, move |tex| {
+                                if let Some(th) = this_f.upgrade() {
+                                    *th.current_favicon.borrow_mut() = Some(tex);
+                                    let st = th.current_state.borrow().clone();
+                                    (th.on_state_changed)(&st);
+                                }
+                            });
+                        }
+                    }
+
                     if !is_priv && !uri.starts_with("brunya://") {
                         storage_uri.record_history_visit(&uri, &state.title).ok();
                     }
@@ -251,6 +268,23 @@ impl WebView {
         } else {
             self.internal_area.set_visible(false);
             self.webkit_view.set_visible(true);
+
+            // Carregar favicon do domínio antecipadamente do cache ou disparar fetch assíncrono
+            if let Some(domain) = FaviconManager::extract_domain(&clean_url) {
+                if let Some(tex) = FaviconManager::load_cached_favicon(&domain) {
+                    *self.current_favicon.borrow_mut() = Some(tex);
+                } else {
+                    let this_f = Rc::downgrade(self);
+                    FaviconManager::fetch_favicon_async(domain, move |tex| {
+                        if let Some(th) = this_f.upgrade() {
+                            *th.current_favicon.borrow_mut() = Some(tex);
+                            let st = th.current_state.borrow().clone();
+                            (th.on_state_changed)(&st);
+                        }
+                    });
+                }
+            }
+
             self.webkit_view.load_uri(&clean_url);
         }
     }
