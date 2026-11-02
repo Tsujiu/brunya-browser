@@ -90,11 +90,9 @@ impl BrowserHeader {
         let shield_black_tex = gdk4::Texture::from_bytes(&black_bytes).ok();
 
         let shield_btn = Button::builder()
-            .css_classes(["flat", "shield-chip"])
+            .css_classes(["flat", "circular", "nav-btn"])
             .tooltip_text(&t!("privacy.shield_title"))
             .build();
-
-        let shield_content = GtkBox::new(Orientation::Horizontal, 6);
 
         let initial_dark = libadwaita::StyleManager::default().is_dark();
         let initial_tex = if initial_dark {
@@ -111,16 +109,12 @@ impl BrowserHeader {
             Image::from_icon_name("security-high-symbolic")
         };
 
-        let shield_label = Label::builder()
-            .label("0")
-            .css_classes(["numeric", "caption", "bold"])
-            .build();
+        let shield_label = Label::builder().label("0").build();
 
-        shield_content.append(&shield_icon);
-        shield_content.append(&shield_label);
-        shield_btn.set_child(Some(&shield_content));
+        // Apenas o ícone puro do escudo: nada em volta, nenhum contador
+        shield_btn.set_child(Some(&shield_icon));
 
-        // Removido o escudo da esquerda: somente a barra, o favorito e o escudo oficial à direita
+        // Barra de navegação com entrada de texto, favorito e somente o ícone do escudo
         address_box.append(&address_entry);
         address_box.append(&bookmark_btn);
         address_box.append(&shield_btn);

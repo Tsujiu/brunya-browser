@@ -24,5 +24,9 @@
   "dev_tools": "Developer Tools",
   "private_window": "New Private Window",
   "about": "About Brunya",
-  "quit": "Quit"
+  "quit": "Quit",
+  "search_logo": "Search",
+  "search_tagline": "Search anything, anywhere — fast, private, and modern.",
+  "search_button": "Search",
+  "search_placeholder_prefix": "Search on"
 }

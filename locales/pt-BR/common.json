@@ -24,5 +24,9 @@
   "dev_tools": "Ferramentas do Desenvolvedor",
   "private_window": "Nova Janela Privada",
   "about": "Sobre o Brunya",
-  "quit": "Sair"
+  "quit": "Sair",
+  "search_logo": "Pesquisa",
+  "search_tagline": "Pesquise qualquer coisa, em qualquer lugar — rápido, privado e moderno.",
+  "search_button": "Pesquisar",
+  "search_placeholder_prefix": "Pesquisar no"
 }
