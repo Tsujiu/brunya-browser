@@ -27,6 +27,35 @@ pub enum ThemePreference {
     Dark,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum SecureDnsMode {
+    #[default]
+    System,
+    Cloudflare, // https://cloudflare-dns.com/dns-query
+    Quad9,      // https://dns.quad9.net/dns-query (Focado em privacidade sem logs)
+    Custom,
+}
+
+impl SecureDnsMode {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            SecureDnsMode::System => "DNS Padrão do Sistema Operacional",
+            SecureDnsMode::Cloudflare => "Cloudflare (1.1.1.1)",
+            SecureDnsMode::Quad9 => "Quad9 (Focado em Privacidade e Proteção)",
+            SecureDnsMode::Custom => "Provedor DNS Personalizado",
+        }
+    }
+
+    pub fn endpoint_url(&self, _custom: &str) -> Option<&'static str> {
+        match self {
+            SecureDnsMode::System => None,
+            SecureDnsMode::Cloudflare => Some("https://cloudflare-dns.com/dns-query"),
+            SecureDnsMode::Quad9 => Some("https://dns.quad9.net/dns-query"),
+            SecureDnsMode::Custom => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchEngine {
     pub name: String,
@@ -55,6 +84,8 @@ pub struct UserSettings {
     pub block_third_party_cookies: bool,
     pub hardware_acceleration: bool,
     pub do_not_track: bool,
+    pub secure_dns_mode: SecureDnsMode,
+    pub secure_dns_custom_url: String,
 }
 
 impl Default for UserSettings {
@@ -71,6 +102,8 @@ impl Default for UserSettings {
             block_third_party_cookies: true,
             hardware_acceleration: true,
             do_not_track: true,
+            secure_dns_mode: SecureDnsMode::Quad9, // Padrão com foco em privacidade
+            secure_dns_custom_url: String::new(),
         }
     }
 }

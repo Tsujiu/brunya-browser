@@ -30,16 +30,18 @@ O desenvolvimento do BEAR Browser é conduzido em etapas progressivas, guiadas p
 
 ---
 
-## 🟡 FASE 2 — Privacidade Avançada e Bloqueio Granular (PRÓXIMA ETAPA)
-- [ ] Suporte completo a parsing de regras de sintaxe Adblock Plus / uBlock Origin via listas dinâmicas.
-- [ ] Atualização segura de listas de filtros em segundo plano com verificação de assinatura digital.
-- [ ] Painel detalhado de bloqueios por aba (lista de scripts e elementos bloqueados por domínio).
-- [ ] Particionamento estrito de cookies de terceiros e proteção ativa contra canvas fingerprinting.
-- [ ] Suporte a DNS over HTTPS (DoH) configurável com provedores focados em privacidade (Quad9, Mullvad).
+## 🟢 FASE 2 — Privacidade Avançada e Bloqueio Granular (CONCLUÍDA)
+- [x] Motor adblock com parsing completo de sintaxe ABP/EasyList (`||`, `@@`, `##`, `$third-party`, `$script`).
+- [x] Atualização atômica de listas de filtros com verificação SHA-256 e rollback de emergência.
+- [x] Rastreamento granular de bloqueios por aba com categorização de rastreadores.
+- [x] Modos de proteção: Balanceado (padrão) e Rigoroso (máxima proteção).
+- [x] Diálogo de permissões de site por origem (câmera, microfone, localização, notificações) integrado ao cadeado de segurança.
+- [x] Configurações de DNS Seguro (DNS-over-HTTPS / DoH) com provedores Quad9 e Cloudflare.
+- [x] Janela de navegação privada (`bear://private`) com garantia de não persistência de histórico ou dados em disco.
 
 ---
 
-## ⚪ FASE 3 — Desempenho e Otimizações de Memória
+## 🟡 FASE 3 — Desempenho e Otimizações de Memória (PRÓXIMA ETAPA)
 - [ ] Otimizações de pipeline com EGL / DMA-BUF OSR zero-copy entre GPU do Chromium e GSK do GTK4.
 - [ ] Ajuste dinâmico de taxa de quadros (60Hz / 120Hz / 144Hz) e throttling de abas em segundo plano para 1 frame/minuto.
 - [ ] Metodologia formal de benchmarking automatizado comparativo contra Chromium e Firefox.

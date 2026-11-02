@@ -40,6 +40,7 @@ pub struct WebView {
     adblock: Arc<AdblockEngine>,
     storage: Arc<StorageManager>,
     settings: Arc<SettingsManager>,
+    is_private: bool,
     is_loading: AtomicBool,
     on_state_changed: Rc<dyn Fn(&NavigationState)>,
 }
@@ -50,6 +51,7 @@ impl WebView {
         adblock: Arc<AdblockEngine>,
         storage: Arc<StorageManager>,
         settings: Arc<SettingsManager>,
+        is_private: bool,
         on_state_changed: Rc<dyn Fn(&NavigationState)>,
     ) -> Rc<Self> {
         let container = GtkBox::new(Orientation::Vertical, 0);
@@ -65,9 +67,12 @@ impl WebView {
         content_area.set_hexpand(true);
         container.append(&content_area);
 
+        let default_start = if is_private { "bear://private" } else { "bear://newtab" };
+        let default_title = if is_private { "Janela Privada" } else { "Nova Aba" };
+
         let initial_state = NavigationState {
-            url: "bear://newtab".to_string(),
-            title: "Nova Aba".to_string(),
+            url: default_start.to_string(),
+            title: default_title.to_string(),
             security_level: SecurityLevel::Internal,
             is_loading: false,
             ..Default::default()
@@ -79,17 +84,18 @@ impl WebView {
             content_area,
             progress_bar,
             current_state: RefCell::new(initial_state),
-            history_stack: RefCell::new(vec!["bear://newtab".to_string()]),
+            history_stack: RefCell::new(vec![default_start.to_string()]),
             history_index: RefCell::new(0),
             adblock,
             storage,
             settings,
+            is_private,
             is_loading: AtomicBool::new(false),
             on_state_changed,
         });
 
         // Carregar página inicial
-        view.load_url("bear://newtab");
+        view.load_url(default_start);
         view
     }
 
@@ -170,6 +176,7 @@ impl WebView {
                     },
                 ))
             }
+            "bear://private" => ("Janela Privada", crate::ui::private_view::build_private_info_view()),
             "bear://about" => ("Sobre o BEAR", crate::ui::internal_views::build_about_view()),
             _ => ("Página Não Encontrada", crate::ui::internal_views::build_about_view()),
         };
@@ -293,8 +300,10 @@ impl WebView {
         self.progress_bar.set_visible(false);
         self.is_loading.store(false, Ordering::SeqCst);
 
-        // Salvar no histórico persistente SQLite
-        self.storage.record_history_visit(url, title).ok();
+        // Salvar no histórico persistente SQLite (apenas em modo normal, NUNCA em modo privado)
+        if !self.is_private {
+            self.storage.record_history_visit(url, title).ok();
+        }
 
         // Container rolável do conteúdo web
         let scroll = ScrolledWindow::builder()
