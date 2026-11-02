@@ -122,22 +122,6 @@ entry text:focus-visible,
     border-color: rgba(255, 255, 255, 0.12);
 }
 
-/* Badge com Consumo de RAM na Aba */
-.tab-ram-badge {
-    font-size: 10px;
-    font-weight: 600;
-    color: @brunya_text_muted;
-    background-color: rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    padding: 1px 6px;
-    margin-right: 2px;
-}
-
-.tab-pill.active .tab-ram-badge {
-    color: @brunya_accent;
-    background-color: rgba(56, 189, 248, 0.16);
-}
-
 .tab-select-btn {
     border: none;
     background: transparent;
