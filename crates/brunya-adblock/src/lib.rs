@@ -141,37 +141,28 @@ impl AdblockEngine {
         }
     }
 
-    /// Carrega as regras fundamentais de privacidade do Brunya (EasyList + EasyPrivacy essenciais).
+    /// Carrega as regras fundamentais de proteção do BruNya Shield (EasyList + EasyPrivacy + uBlock).
     fn load_default_protection_list(&self) {
-        let default_rules = [
-            "||doubleclick.net^$third-party",
-            "||google-analytics.com^",
-            "||googletagmanager.com^",
-            "||adnxs.com^",
-            "||criteo.com^",
-            "||criteo.net^",
-            "||scorecardresearch.com^",
-            "||taboola.com^",
-            "||outbrain.com^",
-            "||connect.facebook.net/*/fbevents.js",
-            "||analytics.tiktok.com^",
-            "||hotjar.com^",
-            "||clarity.ms^",
-            "||telemetry.api.*^",
-            "/pagead/js/adsbygoogle.js",
-            "||adservice.google.*^",
-            "||amazon-adsystem.com^",
-            "||moatads.com^",
-            "||quantserve.com^",
-            "||chartbeat.com^",
-        ];
-
         let mut rules = self.rules.write();
-        for r in default_rules {
-            if let Some(parsed) = ParsedRule::parse(r) {
-                rules.push(parsed);
+
+        if let Ok(rules_val) = serde_json::from_str::<serde_json::Value>(include_str!("../resources/adblock_rules.json")) {
+            if let Some(arr) = rules_val.as_array() {
+                for item in arr {
+                    if let Some(trigger) = item.get("trigger") {
+                        if let Some(pattern) = trigger.get("url-filter").and_then(|u| u.as_str()) {
+                            let clean_p = pattern.trim_matches('.').trim_matches('*');
+                            if !clean_p.is_empty() {
+                                let rule_str = format!("||{}^", clean_p.replace("\\.", "."));
+                                if let Some(parsed) = ParsedRule::parse(&rule_str) {
+                                    rules.push(parsed);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
+
         info!("BruNya Shield carregou {} regras fundamentais de proteção", rules.len());
     }
 
