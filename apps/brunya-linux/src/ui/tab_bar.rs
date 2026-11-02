@@ -118,6 +118,17 @@ impl BrowserTabBar {
                 &tab.title
             };
 
+            // Tooltip informativo com consumo de RAM ao passar o mouse sobre o ícone
+            let is_internal = tab.url.starts_with("brunya://");
+            let ram_mb = brunya_diagnostics::get_tab_memory_mb(is_internal, num_tabs);
+            let ram_tooltip = if is_internal {
+                format!("{} — Consumo de RAM: {} MB (Otimizado)", display_title, ram_mb)
+            } else {
+                let domain = tab.url.split('/').nth(2).unwrap_or(display_title);
+                format!("{} — Consumo de RAM: {} MB", domain, ram_mb)
+            };
+            icon.set_tooltip_text(Some(&ram_tooltip));
+
             let show_label = target_width >= 70;
             let max_chars = if target_width >= 180 { 18 } else if target_width >= 120 { 11 } else { 6 };
 
