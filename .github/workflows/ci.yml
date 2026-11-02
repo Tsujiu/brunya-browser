@@ -1,0 +1,114 @@
+name: CI — Brunya Browser
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  audit-and-lint:
+    name: Code Quality & Formatting
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libgtk-4-dev \
+            libadwaita-1-dev \
+            libsqlite3-dev \
+            clang
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Check code formatting
+        run: cargo fmt --all --check
+
+      - name: Run Clippy static analysis
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libgtk-4-dev \
+            libadwaita-1-dev \
+            libsqlite3-dev \
+            clang
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run all workspace tests (headless)
+        run: cargo test --workspace --verbose
+
+      - name: Run full automated benchmark
+        run: |
+          cargo build -p brunya-linux
+          ./target/debug/brunya-linux --benchmark-full
+
+  package:
+    name: Build & Package Debian (.deb)
+    runs-on: ubuntu-24.04
+    needs: [audit-and-lint, test]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libgtk-4-dev \
+            libadwaita-1-dev \
+            libsqlite3-dev \
+            clang \
+            dpkg-dev \
+            binutils
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Debian package
+        run: ./scripts/build-deb.sh
+
+      - name: Generate CycloneDX SBOM
+        run: ./scripts/generate-sbom.sh
+
+      - name: Upload .deb and SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: brunya-browser-linux-amd64
+          path: |
+            dist/*.deb
+            dist/*.json

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="28" y1="28" x2="228" y2="228" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1E3A8A"/>
+      <stop offset="50%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#38BDF8"/>
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="64" y1="64" x2="192" y2="192" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#E2E8F0" stop-opacity="0.85"/>
+    </linearGradient>
+    <filter id="shadow" x="16" y="20" width="224" height="224" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0F172A" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Fundo Circular Moderno com Sombra -->
+  <rect x="28" y="28" width="200" height="200" rx="52" fill="url(#bgGrad)" filter="url(#shadow)"/>
+
+  <!-- Órbitas de Rede / Conectividade Global -->
+  <circle cx="128" cy="128" r="68" stroke="#FFFFFF" stroke-width="3" stroke-opacity="0.25" stroke-dasharray="8 6"/>
+  <ellipse cx="128" cy="128" rx="68" ry="26" stroke="#FFFFFF" stroke-width="2.5" stroke-opacity="0.35" transform="rotate(-25 128 128)"/>
+
+  <!-- Escudo Central de Privacidade e Segurança (Brunya Shield) -->
+  <path d="M128 62 L172 82 V128 C172 158 152 184 128 194 C104 184 84 158 84 128 V82 Z" fill="url(#shieldGrad)"/>
+
+  <!-- Núcleo de Velocidade e Conexão (B de Brunya estilizado) -->
+  <path d="M116 94 H134 C142 94 148 98 148 105 C148 110 144 114 138 115 C145 116 150 121 150 128 C150 136 143 142 134 142 H116 Z" fill="#1D4ED8"/>
+  <path d="M125 102 V112 H133 C136 112 139 110 139 107 C139 104 136 102 133 102 Z" fill="#FFFFFF"/>
+  <path d="M125 120 V134 H134 C137 134 140 131 140 127 C140 123 137 120 134 120 Z" fill="#FFFFFF"/>
+</svg>

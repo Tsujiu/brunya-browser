@@ -1,0 +1,54 @@
+name: Release — Brunya Browser
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-release:
+    name: Build & Publish Release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libgtk-4-dev \
+            libadwaita-1-dev \
+            libsqlite3-dev \
+            clang \
+            dpkg-dev \
+            binutils
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Debian package (.deb)
+        run: ./scripts/build-deb.sh
+
+      - name: Generate CycloneDX SBOM
+        run: ./scripts/generate-sbom.sh
+
+      - name: Generate SHA-256 Checksums
+        run: |
+          cd dist
+          sha256sum *.deb *.json > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.deb
+            dist/*.json
+            dist/SHA256SUMS
+          draft: false
+          prerelease: false
+          generate_release_notes: true

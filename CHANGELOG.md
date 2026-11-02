@@ -5,6 +5,17 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 
 ---
 
+## [0.5.0-alpha] - 2026-11-02
+
+### Adicionado
+- **Fase 4 Concluída:** Distribuição e Empacotamento (.deb / APT).
+- **Pacote Debian Oficial (.deb):** Pipeline de empacotamento com controle estrito de dependências (`libgtk-4-1`, `libadwaita-1-0`, `libsqlite3-0`), integração desktop (`brunya-browser.desktop`), ícone SVG escalável e scripts `postinst`/`postrm` registrando alternativas no sistema (`x-www-browser`).
+- **Repositório APT Assinado:** Geração de repositório APT em conformidade com o padrão Debian/Ubuntu, com arquivos `Packages`, `Packages.gz`, `Release` com metadados de validade e assinaturas criptográficas GPG (`InRelease` e `Release.gpg`).
+- **Motor Criptográfico brunya-updater:** Módulo em Rust com validação de manifesto, hashes SHA-256 de artefatos, proteção contra ataques de congelamento (`expires_at`) e rejeição estrita de rollback de versão.
+- **Inventário de Segurança SBOM:** Script de geração automatizada de SBOM em conformidade com o padrão internacional CycloneDX 1.5 JSON inventariando todas as dependências do projeto.
+- **Pipeline de Integração Contínua (CI/CD):** Workflows no GitHub Actions para linting, checagem de formatação, suíte de testes headless, benchmark automatizado e publicação de releases.
+- **Guias de Instalação e Distribuição:** Criação de `docs/INSTALL.md` e `docs/RELEASE.md`.
+
 ## [0.4.0-alpha] - 2026-11-01
 
 ### Adicionado
