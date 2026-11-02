@@ -51,6 +51,8 @@ pub struct Manifest {
     #[serde(default)]
     pub homepage_url: Option<String>,
     #[serde(default)]
+    pub default_locale: Option<String>,
+    #[serde(default)]
     pub icons: HashMap<String, String>,
 
     // Background
@@ -95,8 +97,8 @@ pub struct Manifest {
     #[serde(default)]
     pub declarative_net_request: Option<DeclarativeNetRequestManifest>,
 
-    // Web Accessible Resources
-    #[serde(default)]
+    // Web Accessible Resources (lista de strings no MV2, objetos no MV3)
+    #[serde(default, deserialize_with = "de_web_accessible")]
     pub web_accessible_resources: Vec<WebAccessibleResourceManifest>,
 
     // Minimum browser version
@@ -163,7 +165,7 @@ pub struct ActionManifest {
     pub default_title: Option<String>,
     #[serde(default)]
     pub default_popup: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "de_icon_map")]
     pub default_icon: Option<HashMap<String, String>>,
     #[serde(default)]
     pub default_area: Option<String>, // "navbar" or "menubar"
@@ -395,12 +397,16 @@ impl Manifest {
             .collect();
 
         let now = chrono::Utc::now();
+        let locale = self.default_locale.as_deref();
+        let name = localize_message(dir, locale, &self.name);
+        let short_name = self.short_name.as_ref().map(|s| localize_message(dir, locale, s));
+        let description = self.description.as_ref().map(|s| localize_message(dir, locale, s));
 
         crate::ExtensionInfo {
             id: ext_id,
-            name: self.name.clone(),
-            short_name: self.short_name.clone(),
-            description: self.description.clone(),
+            name,
+            short_name,
+            description,
             version: self.version.clone(),
             author: self.author.clone(),
             homepage_url: self.homepage_url.clone(),
@@ -434,6 +440,111 @@ impl Manifest {
     pub fn manifest_version(&self) -> ManifestVersion {
         ManifestVersion::from_u8(self.manifest_version).unwrap_or(ManifestVersion::V3)
     }
+}
+
+/// `default_icon` pode ser uma string (`"icon.png"`) ou um mapa de tamanho para caminho.
+fn de_icon_map<'de, D>(deserializer: D) -> std::result::Result<Option<HashMap<String, String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<serde_json::Value>::deserialize(deserializer)?;
+    Ok(match value {
+        None | Some(serde_json::Value::Null) => None,
+        Some(serde_json::Value::String(path)) => {
+            let mut map = HashMap::new();
+            map.insert("128".to_string(), path);
+            Some(map)
+        }
+        Some(serde_json::Value::Object(obj)) => {
+            let mut map = HashMap::new();
+            for (size, path) in obj {
+                if let Some(path) = path.as_str() {
+                    map.insert(size, path.to_string());
+                }
+            }
+            if map.is_empty() { None } else { Some(map) }
+        }
+        _ => None,
+    })
+}
+
+/// Aceita o formato MV2 (`["img.png"]`) e o formato MV3 (`[{ resources, matches }]`).
+fn de_web_accessible<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Vec<WebAccessibleResourceManifest>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    let Some(items) = value.as_array() else {
+        return Ok(Vec::new());
+    };
+    let mut out = Vec::new();
+    let mut legacy = Vec::new();
+    for item in items {
+        match item {
+            serde_json::Value::String(path) => legacy.push(path.clone()),
+            serde_json::Value::Object(obj) => {
+                let resources = obj
+                    .get("resources")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+                    .unwrap_or_default();
+                let matches = obj
+                    .get("matches")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+                    .unwrap_or_default();
+                out.push(WebAccessibleResourceManifest {
+                    resources,
+                    matches,
+                    extension_ids: Vec::new(),
+                    use_dynamic_url: false,
+                });
+            }
+            _ => {}
+        }
+    }
+    if !legacy.is_empty() {
+        out.push(WebAccessibleResourceManifest {
+            resources: legacy,
+            matches: vec!["<all_urls>".to_string()],
+            extension_ids: Vec::new(),
+            use_dynamic_url: false,
+        });
+    }
+    Ok(out)
+}
+
+/// Substitui `__MSG_chave__` pelo texto em `_locales`.
+pub fn localize_message(dir: &Path, default_locale: Option<&str>, text: &str) -> String {
+    let Some(key) = text
+        .strip_prefix("__MSG_")
+        .and_then(|rest| rest.strip_suffix("__"))
+    else {
+        return text.to_string();
+    };
+    let mut locales = Vec::new();
+    if let Some(locale) = default_locale {
+        locales.push(locale.to_string());
+    }
+    locales.extend([
+        "pt_BR".to_string(),
+        "pt-BR".to_string(),
+        "pt".to_string(),
+        "en".to_string(),
+        "en_US".to_string(),
+        "en-US".to_string(),
+    ]);
+    for locale in locales {
+        let path = dir.join("_locales").join(&locale).join("messages.json");
+        let Ok(raw) = std::fs::read_to_string(&path) else { continue };
+        let Ok(json) = serde_json::from_str::<serde_json::Value>(&raw) else { continue };
+        if let Some(message) = json.get(key).and_then(|entry| entry.get("message")).and_then(|m| m.as_str()) {
+            return message.to_string();
+        }
+    }
+    text.to_string()
 }
 
 fn is_valid_version_string(v: &str) -> bool {

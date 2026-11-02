@@ -36,7 +36,7 @@ Consulte o guia completo em [docs/BUILD.md](docs/BUILD.md).
 
 ### 1. Clonar o repositório
 ```bash
-git clone https://github.com/brunya-browser/brunya-browser.git
+git clone https://github.com/Tsujiu/brunya-browser.git
 cd brunya-browser
 ```
 

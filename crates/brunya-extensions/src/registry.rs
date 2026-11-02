@@ -149,9 +149,20 @@ impl ExtensionRegistry {
             .collect()
     }
 
-    /// Lista apenas extensões ativas.
+    /// Extensões habilitadas: instaladas da loja e carregadas em modo desenvolvedor.
     pub fn list_active(&self) -> Vec<ExtensionInfo> {
-        self.list_by_state(ExtensionState::Active)
+        self.data
+            .read()
+            .extensions
+            .values()
+            .filter(|ext| {
+                matches!(
+                    ext.state,
+                    ExtensionState::Active | ExtensionState::DeveloperMode
+                )
+            })
+            .cloned()
+            .collect()
     }
 
     /// Verifica se uma extensão está registrada.

@@ -1,13 +1,18 @@
-use brunya_extensions::{ExtensionSystem, types::ExtensionState};
+use brunya_extensions::loader::inspect_package;
+use brunya_extensions::store::{download_store_package, parse_store_input};
+use brunya_extensions::types::{ExtensionState, InstallType};
+use brunya_extensions::ExtensionSystem;
 use brunya_i18n::{t, I18nManager, Language};
 use brunya_settings::{SettingsManager, ShortcutDisplayMode, ThemePreference};
 use brunya_storage::StorageManager;
+use crate::engine::extension_host::{extension_image, toolbar_icon};
 use crate::engine::FaviconManager;
 use gtk4::prelude::*;
 use gtk4::{
     Align, Box as GtkBox, Button, Entry, GestureClick,
     Image, Label, ListBox, Orientation, Popover, ScrolledWindow, SelectionMode, Switch,
 };
+use gtk4::gio;
 use libadwaita::prelude::*;
 use libadwaita::ActionRow;
 use std::cell::RefCell;
@@ -1526,11 +1531,16 @@ pub fn build_about_view() -> gtk4::Widget {
 }
 
 /// Constrói a página interna "brunya://extensions" — Gerenciador de Extensões.
-pub fn build_extensions_view<F: Fn(&str) + 'static + Clone>(
+pub fn build_extensions_view<F, C>(
     ext_system: Arc<ExtensionSystem>,
     _storage_mgr: Arc<StorageManager>,
     on_navigate: F,
-) -> gtk4::Widget {
+    on_changed: C,
+) -> gtk4::Widget
+where
+    F: Fn(&str) + 'static + Clone,
+    C: Fn(&str) + 'static + Clone,
+{
     let container = GtkBox::new(Orientation::Vertical, 0);
     container.set_vexpand(true);
     container.set_hexpand(true);
@@ -1546,8 +1556,15 @@ pub fn build_extensions_view<F: Fn(&str) + 'static + Clone>(
     header_box.add_css_class("settings-page-header");
 
     let title_box = GtkBox::new(Orientation::Horizontal, 8);
-    let title_icon = Image::from_icon_name("applications-addons-symbolic");
-    title_icon.set_pixel_size(26);
+    let title_icon = if let Some(texture) = toolbar_icon(libadwaita::StyleManager::default().is_dark()) {
+        let image = Image::from_paintable(Some(&texture));
+        image.set_pixel_size(26);
+        image
+    } else {
+        let image = Image::from_icon_name("application-x-addon");
+        image.set_pixel_size(26);
+        image
+    };
     let title_lbl = Label::builder()
         .label(&t!("extensions.extensions_title"))
         .css_classes(["settings-title"])
@@ -1564,6 +1581,33 @@ pub fn build_extensions_view<F: Fn(&str) + 'static + Clone>(
     header_box.append(&subtitle_lbl);
     container.append(&header_box);
 
+    let store_row = GtkBox::new(Orientation::Horizontal, 8);
+    store_row.set_margin_start(40);
+    store_row.set_margin_end(40);
+    store_row.set_margin_top(16);
+    let store_entry = Entry::builder()
+        .placeholder_text(&t!("extensions.store_placeholder"))
+        .hexpand(true)
+        .build();
+    let store_btn = Button::builder()
+        .label(&t!("extensions.store_install"))
+        .css_classes(["settings-pill", "suggested-action"])
+        .build();
+    store_row.append(&store_entry);
+    store_row.append(&store_btn);
+    container.append(&store_row);
+
+    let status_lbl = Label::builder()
+        .label(&t!("extensions.store_hint"))
+        .css_classes(["caption", "dim-label"])
+        .halign(Align::Start)
+        .wrap(true)
+        .margin_start(40)
+        .margin_end(40)
+        .margin_top(6)
+        .build();
+    container.append(&status_lbl);
+
     // ── Ações ──
     let actions_box = GtkBox::new(Orientation::Horizontal, 8);
     actions_box.set_margin_start(40);
@@ -1579,14 +1623,14 @@ pub fn build_extensions_view<F: Fn(&str) + 'static + Clone>(
         .label(&t!("extensions.check_updates"))
         .css_classes(["settings-pill"])
         .build();
-    let dev_mode_btn = Button::builder()
-        .label(&t!("extensions.developer_mode"))
+    let file_btn = Button::builder()
+        .label(&t!("extensions.install_crx"))
         .css_classes(["settings-pill"])
         .build();
 
     actions_box.append(&load_unpacked_btn);
+    actions_box.append(&file_btn);
     actions_box.append(&check_updates_btn);
-    actions_box.append(&dev_mode_btn);
     container.append(&actions_box);
 
     // ── Lista de extensões ──
@@ -1603,6 +1647,7 @@ pub fn build_extensions_view<F: Fn(&str) + 'static + Clone>(
         let ext_system_c = ext_system.clone();
         let list_box_c = ext_list_box.clone();
         let on_nav = on_navigate.clone();
+        let on_changed_list = on_changed.clone();
         move || {
             while let Some(child) = list_box_c.first_child() {
                 list_box_c.remove(&child);
@@ -1612,7 +1657,11 @@ pub fn build_extensions_view<F: Fn(&str) + 'static + Clone>(
                 let empty_box = GtkBox::new(Orientation::Vertical, 8);
                 empty_box.set_margin_top(24);
                 empty_box.set_halign(Align::Center);
-                let empty_icon = Image::from_icon_name("applications-addons-symbolic");
+                let empty_icon = if let Some(texture) = toolbar_icon(libadwaita::StyleManager::default().is_dark()) {
+                    Image::from_paintable(Some(&texture))
+                } else {
+                    Image::from_icon_name("application-x-addon")
+                };
                 empty_icon.set_pixel_size(48);
                 empty_icon.set_opacity(0.3);
                 let empty_label = Label::builder()
@@ -1634,8 +1683,7 @@ pub fn build_extensions_view<F: Fn(&str) + 'static + Clone>(
                 header_row.set_margin_bottom(8);
                 header_row.set_margin_start(16);
                 header_row.set_margin_end(16);
-                let icon = Image::from_icon_name("applications-addons-symbolic");
-                icon.set_pixel_size(32);
+                let icon = extension_image(&ext, 32);
                 let info_col = GtkBox::new(Orientation::Vertical, 2);
                 info_col.set_hexpand(true);
                 let name_lbl = Label::builder()
@@ -1689,12 +1737,14 @@ pub fn build_extensions_view<F: Fn(&str) + 'static + Clone>(
                 let ext_id_clone = ext.id.clone();
                 let ext_sys_e = ext_system_c.clone();
                 let rebuild_e = rebuild_list_fn.clone();
+                let on_changed_e = on_changed_list.clone();
                 enable_btn.connect_clicked(move |_| {
                     if ext_sys_e.registry.get(&ext_id_clone).map(|e| e.state == ExtensionState::Disabled).unwrap_or(false) {
                         ext_sys_e.manager.enable_extension(&ext_id_clone).ok();
                     } else {
                         ext_sys_e.manager.disable_extension(&ext_id_clone).ok();
                     }
+                    on_changed_e("refresh");
                     if let Some(ref f) = *rebuild_e.borrow() { f(); }
                 });
                 let details_label = t!("extensions.details");
@@ -1709,8 +1759,10 @@ pub fn build_extensions_view<F: Fn(&str) + 'static + Clone>(
                 let ext_id_r = ext.id.clone();
                 let ext_sys_rm = ext_system_c.clone();
                 let rebuild_rm = rebuild_list_fn.clone();
+                let on_changed_rm = on_changed_list.clone();
                 remove_btn.connect_clicked(move |_| {
                     ext_sys_rm.manager.remove_extension(&ext_id_r).ok();
+                    on_changed_rm("refresh");
                     if let Some(ref f) = *rebuild_rm.borrow() { f(); }
                 });
                 if !ext.permissions.is_empty() {
@@ -1743,24 +1795,183 @@ pub fn build_extensions_view<F: Fn(&str) + 'static + Clone>(
 
     let ext_sys_load = ext_system.clone();
     let rebuild_load = rebuild_list.clone();
-    load_unpacked_btn.connect_clicked(move |_| {
-        let dir = std::path::PathBuf::from("/tmp/brunya-test-ext");
-        if dir.join("manifest.json").exists() {
-            match ext_sys_load.manager.install_from_directory(&dir) {
-                Ok(info) => {
-                    tracing::info!("Extensão carregada: {} v{}", info.name, info.version);
-                    if let Some(ref f) = *rebuild_load.borrow() { f(); }
-                }
-                Err(e) => { tracing::warn!("Falha ao carregar extensão: {}", e); }
+    let on_changed_load = on_changed.clone();
+    let status_load = status_lbl.clone();
+    load_unpacked_btn.connect_clicked(move |btn| {
+        let dialog = gtk4::FileDialog::builder()
+            .title(&t!("extensions.select_directory"))
+            .modal(true)
+            .build();
+
+        let ext_sys = ext_sys_load.clone();
+        let rebuild = rebuild_load.clone();
+        let status_load = status_load.clone();
+        let on_changed_load = on_changed_load.clone();
+
+        if let Some(root) = btn.root() {
+            if let Some(window) = root.downcast_ref::<gtk4::Window>() {
+                dialog.select_folder(Some(window), None::<&gio::Cancellable>, move |result| {
+                    match result {
+                        Ok(file) => {
+                            let path = file.path();
+                            if let Some(dir) = path {
+                                if dir.join("manifest.json").exists() {
+                                    match ext_sys.manager.install_from_directory(&dir) {
+                                        Ok(info) => {
+                                            tracing::info!("Extensão carregada: {} v{}", info.name, info.version);
+                                            status_load.set_label(&t!("extensions.extension_installed"));
+                                            on_changed_load(&format!("installed:{}", info.id.0));
+                                            if let Some(ref f) = *rebuild.borrow() { f(); }
+                                        }
+                                        Err(e) => {
+                                            status_load.set_label(&e.to_string());
+                                            tracing::warn!("Falha ao carregar extensão: {}", e);
+                                        }
+                                    }
+                                } else {
+                                    tracing::warn!("Nenhum manifest.json encontrado em {:?}", dir);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            if !e.kind::<gio::IOErrorEnum>().is_some_and(|k| k == gio::IOErrorEnum::Cancelled) {
+                                tracing::warn!("Erro no seletor de pasta: {}", e);
+                            }
+                        }
+                    }
+                });
             }
-        } else {
-            tracing::warn!("Crie /tmp/brunya-test-ext/manifest.json para teste.");
         }
     });
 
     let ext_sys_up = ext_system.clone();
+    let status_up = status_lbl.clone();
     check_updates_btn.connect_clicked(move |_| {
         ext_sys_up.update_mgr.check_for_updates();
+        status_up.set_label(&t!("extensions.up_to_date"));
+    });
+
+    let ext_sys_store = ext_system.clone();
+    let rebuild_store = rebuild_list.clone();
+    let on_changed_store = on_changed.clone();
+    let status_store = status_lbl.clone();
+    let entry_store = store_entry.clone();
+    store_btn.connect_clicked(move |btn| {
+        let query = entry_store.text().to_string();
+        let request = match parse_store_input(&query) {
+            Ok(request) => request,
+            Err(err) => {
+                status_store.set_label(&err.to_string());
+                return;
+            }
+        };
+        status_store.set_label(&t!("extensions.store_installing"));
+        btn.set_sensitive(false);
+        let btn = btn.clone();
+        let status = status_store.clone();
+        let system = ext_sys_store.clone();
+        let rebuild = rebuild_store.clone();
+        let on_changed = on_changed_store.clone();
+        let (sender, receiver) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = sender.send(download_store_package(&request));
+        });
+        glib::timeout_add_local(std::time::Duration::from_millis(150), move || {
+            match receiver.try_recv() {
+                Ok(downloaded) => {
+                    btn.set_sensitive(true);
+                    let parent = btn.root().and_then(|root| root.downcast::<gtk4::Window>().ok());
+                    match downloaded {
+                        Ok(package) => {
+                            let detail = permission_text(&package.preview, &package.store_name);
+                            let title = t!("extensions.install_confirm_title");
+                            let system = system.clone();
+                            let status = status.clone();
+                            let on_changed = on_changed.clone();
+                            let rebuild = rebuild.clone();
+                            confirm_install(parent, title, detail, move || {
+                                match system.manager.install_from_bytes(
+                                    &package.bytes,
+                                    Some(&package.preview.id),
+                                    InstallType::FromStore,
+                                ) {
+                                    Ok(info) => {
+                                        status.set_label(&t!("extensions.extension_installed"));
+                                        on_changed(&format!("installed:{}", info.id.0));
+                                        if let Some(ref refresh) = *rebuild.borrow() { refresh(); }
+                                    }
+                                    Err(err) => status.set_label(&err.to_string()),
+                                }
+                            });
+                        }
+                        Err(err) => status.set_label(&err.to_string()),
+                    }
+                    glib::ControlFlow::Break
+                }
+                Err(std::sync::mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                    btn.set_sensitive(true);
+                    status.set_label(&t!("extensions.extension_error"));
+                    glib::ControlFlow::Break
+                }
+            }
+        });
+    });
+
+    let ext_sys_file = ext_system.clone();
+    let rebuild_file = rebuild_list.clone();
+    let on_changed_file = on_changed.clone();
+    let status_file = status_lbl.clone();
+    file_btn.connect_clicked(move |btn| {
+        let dialog = gtk4::FileDialog::builder()
+            .title(&t!("extensions.select_crx"))
+            .modal(true)
+            .build();
+        let filter = gtk4::FileFilter::new();
+        filter.add_pattern("*.crx");
+        filter.add_pattern("*.zip");
+        filter.add_pattern("*.xpi");
+        filter.set_name(Some("CRX, ZIP, XPI"));
+        dialog.set_default_filter(Some(&filter));
+        let system = ext_sys_file.clone();
+        let rebuild = rebuild_file.clone();
+        let on_changed = on_changed_file.clone();
+        let status = status_file.clone();
+        if let Some(root) = btn.root() {
+            if let Some(window) = root.downcast_ref::<gtk4::Window>() {
+                let parent = window.clone();
+                dialog.open(Some(window), None::<&gio::Cancellable>, move |result| {
+                    let Ok(file) = result else { return };
+                    let Some(path) = file.path() else { return };
+                    let bytes = match std::fs::read(&path) {
+                        Ok(bytes) => bytes,
+                        Err(err) => {
+                            status.set_label(&err.to_string());
+                            return;
+                        }
+                    };
+                    let preview = match inspect_package(&bytes, None) {
+                        Ok(preview) => preview,
+                        Err(err) => {
+                            status.set_label(&err.to_string());
+                            return;
+                        }
+                    };
+                    let detail = permission_text(&preview, "arquivo local");
+                    let title = t!("extensions.install_confirm_title");
+                    confirm_install(Some(parent), title, detail, move || {
+                        match system.manager.install_from_bytes(&bytes, Some(&preview.id), InstallType::Normal) {
+                            Ok(info) => {
+                                status.set_label(&t!("extensions.extension_installed"));
+                                on_changed(&format!("installed:{}", info.id.0));
+                                if let Some(ref refresh) = *rebuild.borrow() { refresh(); }
+                            }
+                            Err(err) => status.set_label(&err.to_string()),
+                        }
+                    });
+                });
+            }
+        }
     });
 
     let scroll = ScrolledWindow::builder()
@@ -1772,4 +1983,50 @@ pub fn build_extensions_view<F: Fn(&str) + 'static + Clone>(
         .css_classes(["settings-page"])
         .build();
     scroll.upcast()
+}
+
+fn permission_text(preview: &brunya_extensions::loader::PackagePreview, source: &str) -> String {
+    let mut lines = vec![
+        format!("{} v{}", preview.name, preview.version),
+        source.to_string(),
+    ];
+    if let Some(description) = &preview.description {
+        if !description.is_empty() {
+            lines.push(description.clone());
+        }
+    }
+    let mut permissions = preview.permissions.clone();
+    permissions.extend(preview.host_permissions.iter().cloned());
+    if permissions.is_empty() {
+        lines.push(t!("extensions.no_permissions"));
+    } else {
+        lines.push(t!("extensions.permissions_title"));
+        for permission in permissions {
+            lines.push(format!("• {permission}"));
+        }
+    }
+    lines.join("\n")
+}
+
+fn confirm_install(
+    parent: Option<gtk4::Window>,
+    title: String,
+    detail: String,
+    on_accept: impl FnOnce() + 'static,
+) {
+    let cancel = t!("extensions.install_cancel");
+    let accept = t!("extensions.install_accept");
+    let dialog = gtk4::AlertDialog::builder()
+        .modal(true)
+        .message(&title)
+        .detail(&detail)
+        .buttons([cancel.as_str(), accept.as_str()])
+        .cancel_button(0)
+        .default_button(1)
+        .build();
+    dialog.choose(parent.as_ref(), None::<&gio::Cancellable>, move |response| {
+        if response == Ok(1) {
+            on_accept();
+        }
+    });
 }

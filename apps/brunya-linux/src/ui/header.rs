@@ -19,7 +19,11 @@ pub struct BrowserHeader {
     pub shield_black_tex: Option<gdk4::Texture>,
     pub theme_toggle_btn: Button,
     pub downloads_btn: Button,
+    pub extension_actions: GtkBox,
     pub extensions_btn: Button,
+    pub extensions_icon: Image,
+    pub extensions_white_tex: Option<gdk4::Texture>,
+    pub extensions_black_tex: Option<gdk4::Texture>,
     pub new_tab_btn: Button,
     pub menu_btn: MenuButton,
 }
@@ -130,11 +134,31 @@ impl BrowserHeader {
             .css_classes(["flat", "circular", "nav-btn"])
             .build();
 
+        let ext_white = glib::Bytes::from_static(include_bytes!(
+            "../../../../assets/icons/brunya-extensions-white.svg"
+        ));
+        let extensions_white_tex = gdk4::Texture::from_bytes(&ext_white).ok();
+        let ext_black = glib::Bytes::from_static(include_bytes!(
+            "../../../../assets/icons/brunya-extensions.svg"
+        ));
+        let extensions_black_tex = gdk4::Texture::from_bytes(&ext_black).ok();
+        let extensions_icon = if let Some(tex) = if initial_dark {
+            extensions_white_tex.as_ref()
+        } else {
+            extensions_black_tex.as_ref()
+        } {
+            let img = Image::from_paintable(Some(tex));
+            img.set_pixel_size(16);
+            img
+        } else {
+            Image::from_icon_name("application-x-addon")
+        };
         let extensions_btn = Button::builder()
-            .icon_name("applications-addons-symbolic")
             .tooltip_text(&t!("extensions.extensions_title"))
             .css_classes(["flat", "circular", "nav-btn"])
+            .child(&extensions_icon)
             .build();
+        let extension_actions = GtkBox::new(Orientation::Horizontal, 2);
 
         let theme_toggle_btn = Button::builder()
             .icon_name(if initial_dark { "display-brightness-symbolic" } else { "weather-clear-night-symbolic" })
@@ -155,6 +179,7 @@ impl BrowserHeader {
             .build();
 
         right_box.append(&downloads_btn);
+        right_box.append(&extension_actions);
         right_box.append(&extensions_btn);
         right_box.append(&theme_toggle_btn);
         right_box.append(&new_tab_btn);
@@ -176,7 +201,11 @@ impl BrowserHeader {
             shield_black_tex,
             theme_toggle_btn,
             downloads_btn,
+            extension_actions,
             extensions_btn,
+            extensions_icon,
+            extensions_white_tex,
+            extensions_black_tex,
             new_tab_btn,
             menu_btn,
         }
@@ -187,11 +216,17 @@ impl BrowserHeader {
             if let Some(ref tex) = self.shield_white_tex {
                 self.shield_icon.set_paintable(Some(tex));
             }
+            if let Some(ref tex) = self.extensions_white_tex {
+                self.extensions_icon.set_paintable(Some(tex));
+            }
             self.theme_toggle_btn.set_icon_name("display-brightness-symbolic");
             self.theme_toggle_btn.set_tooltip_text(Some("Mudar para tema claro"));
         } else {
             if let Some(ref tex) = self.shield_black_tex {
                 self.shield_icon.set_paintable(Some(tex));
+            }
+            if let Some(ref tex) = self.extensions_black_tex {
+                self.extensions_icon.set_paintable(Some(tex));
             }
             self.theme_toggle_btn.set_icon_name("weather-clear-night-symbolic");
             self.theme_toggle_btn.set_tooltip_text(Some("Mudar para tema escuro"));

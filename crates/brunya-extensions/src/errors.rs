@@ -62,6 +62,9 @@ pub enum ExtensionError {
     #[error("Falha na atualização: {0}")]
     UpdateError(String),
 
+    #[error("Falha ao baixar extensão: {0}")]
+    Download(String),
+
     #[error("Extensão incompatível com esta versão do navegador: {0}")]
     Incompatible(String),
 

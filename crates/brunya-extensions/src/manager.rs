@@ -64,11 +64,22 @@ impl ExtensionManager {
         Ok(info)
     }
 
-    /// Instala uma extensão a partir de um arquivo CRX.
+    /// Instala uma extensão a partir de um arquivo CRX, ZIP ou XPI.
     pub fn install_from_crx(&self, crx_path: &Path) -> Result<ExtensionInfo> {
         let loaded = self.loader.read().load_from_crx(crx_path)?;
         let info = self.install_loaded(loaded)?;
         Ok(info)
+    }
+
+    /// Instala os bytes já baixados de uma loja ou de um arquivo local.
+    pub fn install_from_bytes(
+        &self,
+        bytes: &[u8],
+        explicit_id: Option<&str>,
+        install_type: InstallType,
+    ) -> Result<ExtensionInfo> {
+        let loaded = self.loader.read().load_from_bytes(bytes, explicit_id, install_type)?;
+        self.install_loaded(loaded)
     }
 
     /// Instala uma extensão já carregada (registro + permissões + runtime).

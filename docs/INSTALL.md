@@ -39,7 +39,7 @@ sudo apt install -y brunya-browser
 Se você preferir baixar diretamente o pacote instalável:
 
 ### 1. Baixar o pacote `.deb` oficial
-Baixe a versão mais recente em [https://github.com/brunya-browser/brunya-browser/releases](https://github.com/brunya-browser/brunya-browser/releases) ou compile localmente:
+Baixe a versão mais recente em [https://github.com/Tsujiu/brunya-browser/releases](https://github.com/Tsujiu/brunya-browser/releases) ou compile localmente:
 ```bash
 ./scripts/build-deb.sh
 ```

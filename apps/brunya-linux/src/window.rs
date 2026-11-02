@@ -1,4 +1,5 @@
 use brunya_extensions::ExtensionSystem;
+use crate::engine::extension_host::{ExtensionBridge, ExtensionTab};
 use crate::engine::WebView;
 use crate::ui::find_bar::FindBar;
 use crate::ui::header::BrowserHeader;
@@ -32,6 +33,7 @@ pub struct BrunyaWindow {
     storage_manager: Arc<StorageManager>,
     settings_manager: Arc<SettingsManager>,
     extension_system: Option<Arc<ExtensionSystem>>,
+    extension_bridge: Option<Rc<ExtensionBridge>>,
 }
 
 impl BrunyaWindow {
@@ -57,6 +59,14 @@ impl BrunyaWindow {
         // Barra de busca na página (Ctrl+F)
         let find_bar = FindBar::new();
         root_box.append(&find_bar.container);
+
+        let background_host = GtkBox::new(Orientation::Vertical, 0);
+        background_host.set_height_request(0);
+        background_host.set_overflow(gtk4::Overflow::Hidden);
+        root_box.append(&background_host);
+        let extension_bridge = extension_system.clone().map(|system| {
+            ExtensionBridge::new(system, background_host)
+        });
 
         // Stack para visualização do conteúdo das abas com transição fluida e elegante
         let tab_stack = Stack::builder()
@@ -105,7 +115,29 @@ impl BrunyaWindow {
             storage_manager,
             settings_manager,
             extension_system,
+            extension_bridge: extension_bridge.clone(),
         });
+
+        if let Some(bridge) = &extension_bridge {
+            let tabs_win = Rc::downgrade(&brunya_window);
+            let open_win = Rc::downgrade(&brunya_window);
+            let nav_win = Rc::downgrade(&brunya_window);
+            bridge.set_browser_controls(
+                Rc::new(move || {
+                    tabs_win.upgrade().map(|win| win.extension_tabs()).unwrap_or_default()
+                }),
+                Rc::new(move |url| {
+                    if let Some(win) = open_win.upgrade() {
+                        win.open_new_tab(&url, &url);
+                    }
+                }),
+                Rc::new(move |tab_id, url| {
+                    if let Some(win) = nav_win.upgrade() {
+                        win.navigate_tab(TabId(tab_id), &url);
+                    }
+                }),
+            );
+        }
 
         brunya_window.setup_event_handlers();
         brunya_window.setup_shortcuts();
@@ -114,8 +146,78 @@ impl BrunyaWindow {
         let start_url = if is_private { "brunya://private" } else { "brunya://newtab" };
         let start_title = if is_private { "Janela Privada" } else { &t!("common.new_tab") };
         brunya_window.open_new_tab(start_url, start_title);
+        brunya_window.handle_extension_change("refresh");
 
         brunya_window
+    }
+
+    fn extension_tabs(&self) -> Vec<ExtensionTab> {
+        let active = self.tab_manager.active_tab().map(|tab| tab.id);
+        self.tab_manager
+            .list_tabs()
+            .into_iter()
+            .enumerate()
+            .map(|(index, tab)| ExtensionTab {
+                id: tab.id.0,
+                url: tab.url,
+                title: tab.title,
+                active: Some(tab.id) == active,
+                index: index as u32,
+            })
+            .collect()
+    }
+
+    fn navigate_tab(self: &Rc<Self>, tab_id: TabId, url: &str) {
+        if tab_id.0 == 0 {
+            self.navigate_active_tab(url);
+            return;
+        }
+        if let Some(view) = self.tab_views.borrow().get(&tab_id) {
+            view.load_url(url);
+            self.switch_to_tab(tab_id);
+        } else {
+            self.navigate_active_tab(url);
+        }
+    }
+
+    fn handle_extension_change(self: &Rc<Self>, event: &str) {
+        if let Some(bridge) = &self.extension_bridge {
+            if let Some(id) = event.strip_prefix("installed:") {
+                bridge.note_installed(id);
+            }
+            bridge.sync_backgrounds();
+        }
+        self.refresh_extension_toolbar();
+    }
+
+    fn refresh_extension_toolbar(self: &Rc<Self>) {
+        let actions = &self.header.extension_actions;
+        while let Some(child) = actions.first_child() {
+            actions.remove(&child);
+        }
+        let Some(system) = &self.extension_system else { return };
+        let mut extensions = system.manager.list_active_extensions();
+        extensions.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        for ext in extensions {
+            let button = gtk4::Button::builder()
+                .css_classes(["flat", "circular", "nav-btn"])
+                .tooltip_text(&ext.name)
+                .build();
+            button.set_child(Some(&crate::engine::extension_host::extension_image(&ext, 16)));
+            let id = ext.id.0.clone();
+            let has_popup = ext.has_popup;
+            let bridge = self.extension_bridge.clone();
+            let this = self.clone();
+            button.connect_clicked(move |btn| {
+                let Some(bridge) = &bridge else { return };
+                if has_popup {
+                    bridge.open_popup(btn, &id);
+                } else if let Some(tab) = this.extension_tabs().into_iter().find(|tab| tab.active) {
+                    bridge.fire_action_clicked(&id, &tab);
+                }
+            });
+            actions.append(&button);
+        }
     }
 
     pub fn present(&self) {
@@ -155,14 +257,23 @@ impl BrunyaWindow {
                 }
             });
 
+        let this_ext = Rc::downgrade(self);
+        let on_extensions_changed: Rc<dyn Fn(&str)> = Rc::new(move |event| {
+            if let Some(win) = this_ext.upgrade() {
+                win.handle_extension_change(event);
+            }
+        });
+
         let view = WebView::new(
             tid,
             self.adblock_engine.clone(),
             self.storage_manager.clone(),
             self.settings_manager.clone(),
             self.extension_system.clone(),
+            self.extension_bridge.clone(),
             self.is_private,
             on_state_changed,
+            on_extensions_changed,
         );
 
         if url != "brunya://newtab" {

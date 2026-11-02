@@ -17,14 +17,17 @@
 
 pub mod api;
 pub mod errors;
+pub mod inject;
 pub mod loader;
 pub mod manager;
 pub mod manifest;
+pub mod paths;
 pub mod permissions;
 pub mod registry;
 pub mod runtime;
 pub mod security;
 pub mod storage;
+pub mod store;
 pub mod update;
 pub mod types;
 
