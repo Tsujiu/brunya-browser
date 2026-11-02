@@ -1,13 +1,41 @@
 use brunya_settings::search_engines::{SearchEngineDef, ALL_SEARCH_ENGINES};
 use gtk4::prelude::*;
 use gtk4::{
-    Align, Box as GtkBox, Entry, Label, ListBox, Orientation, Popover,
+    Align, Box as GtkBox, Entry, Image, Label, ListBox, Orientation, Popover,
     ScrolledWindow, SelectionMode,
 };
 use libadwaita::prelude::*;
 use libadwaita::ActionRow;
 use std::cell::RefCell;
 use std::rc::Rc;
+
+pub fn get_engine_icon(engine_id: &str) -> gtk4::Widget {
+    // 1. Verificar caminhos locais no sistema ou desenvolvimento
+    let home = std::env::var("HOME").unwrap_or_default();
+    let candidates = [
+        format!("{}/.local/share/brunya/icons/engines/{}.png", home, engine_id),
+        format!("/usr/share/brunya-browser/icons/engines/{}.png", engine_id),
+        format!("assets/icons/engines/{}.png", engine_id),
+    ];
+
+    for path in &candidates {
+        let p = std::path::Path::new(path);
+        if p.exists() {
+            let file = gio::File::for_path(p);
+            if let Ok(texture) = gdk4::Texture::from_file(&file) {
+                let img = Image::from_paintable(Some(&texture));
+                img.set_pixel_size(18);
+                return img.upcast();
+            }
+        }
+    }
+
+    // Fallback elegante para texto com glifo
+    let def = brunya_settings::search_engines::get_engine_by_id(engine_id);
+    let glyph = def.map(|d| d.glyph).unwrap_or("🔍");
+    let lbl = Label::builder().label(glyph).css_classes(["bold", "caption"]).build();
+    lbl.upcast()
+}
 
 pub struct SearchEnginePopover {
     pub popover: Popover,
@@ -22,10 +50,10 @@ impl SearchEnginePopover {
         content.set_margin_bottom(10);
         content.set_margin_start(10);
         content.set_margin_end(10);
-        content.set_width_request(320);
+        content.set_width_request(340);
 
         let title_label = Label::builder()
-            .label("Selecionar Motor de Busca")
+            .label("Motores de Busca")
             .css_classes(["heading", "caption"])
             .halign(Align::Start)
             .margin_bottom(4)
@@ -55,12 +83,9 @@ impl SearchEnginePopover {
                 .activatable(true)
                 .build();
 
-            let badge = Label::builder()
-                .label(engine.glyph)
-                .css_classes(["caption", "bold", "accent"])
-                .margin_end(6)
-                .build();
-            row.add_prefix(&badge);
+            // Puxa o real ícone do motor de busca
+            let icon_widget = get_engine_icon(engine.id);
+            row.add_prefix(&icon_widget);
 
             let sel_cb = on_select_rc.clone();
             let pop_clone = popover_weak.clone();

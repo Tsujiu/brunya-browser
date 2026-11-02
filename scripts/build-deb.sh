@@ -48,6 +48,16 @@ cp "$ROOT_DIR/assets/icons/hicolor/scalable/apps/brunya-browser.svg" \
    "$STAGING_DIR/usr/share/icons/hicolor/scalable/apps/brunya-browser.svg"
 chmod 644 "$STAGING_DIR/usr/share/icons/hicolor/scalable/apps/brunya-browser.svg"
 
+# Instalar ícones dos motores de busca e escudos
+mkdir -p "$STAGING_DIR/usr/share/brunya-browser/icons/engines"
+if [ -d "$ROOT_DIR/assets/icons/engines" ]; then
+    cp -r "$ROOT_DIR/assets/icons/engines/"* "$STAGING_DIR/usr/share/brunya-browser/icons/engines/"
+fi
+cp "$ROOT_DIR/assets/icons/brunya-shield"*.svg "$STAGING_DIR/usr/share/brunya-browser/icons/" || true
+find "$STAGING_DIR" -type d -exec chmod 755 {} +
+find "$STAGING_DIR" -type f -exec chmod 644 {} +
+chmod 755 "$STAGING_DIR/usr/bin/brunya-browser"
+
 # 6. Gerar documentação Debian e Copyright
 echo "• Gerando documentação de copyright e changelog Debian..."
 cat << 'EOF' > "$STAGING_DIR/usr/share/doc/brunya-browser/copyright"

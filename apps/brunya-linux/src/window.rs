@@ -79,6 +79,13 @@ impl BrunyaWindow {
             window.add_css_class("devel"); // Estilo visual diferenciado do Libadwaita para janelas especiais
         }
 
+        let is_dark = libadwaita::StyleManager::default().is_dark();
+        if is_dark {
+            window.add_css_class("dark-theme");
+        } else {
+            window.add_css_class("light-theme");
+        }
+
         let brunya_window = Rc::new(Self {
             window,
             is_private,
@@ -330,17 +337,22 @@ impl BrunyaWindow {
 
         // 3.1. Alternador de Tema Claro / Escuro (Sol / Lua)
         let this_theme = self.clone();
-        self.header.theme_toggle_btn.connect_clicked(move |btn| {
+        self.header.theme_toggle_btn.connect_clicked(move |_| {
             let style_mgr = libadwaita::StyleManager::default();
             let is_dark = style_mgr.is_dark();
-            if is_dark {
-                style_mgr.set_color_scheme(libadwaita::ColorScheme::ForceLight);
-                btn.set_icon_name("weather-clear-night-symbolic");
-                this_theme.settings_manager.update(|s| s.theme = brunya_settings::ThemePreference::Light).ok();
-            } else {
+            let new_dark = !is_dark;
+            if new_dark {
                 style_mgr.set_color_scheme(libadwaita::ColorScheme::ForceDark);
-                btn.set_icon_name("display-brightness-symbolic");
+                this_theme.window.add_css_class("dark-theme");
+                this_theme.window.remove_css_class("light-theme");
+                this_theme.header.update_theme_icons(true);
                 this_theme.settings_manager.update(|s| s.theme = brunya_settings::ThemePreference::Dark).ok();
+            } else {
+                style_mgr.set_color_scheme(libadwaita::ColorScheme::ForceLight);
+                this_theme.window.add_css_class("light-theme");
+                this_theme.window.remove_css_class("dark-theme");
+                this_theme.header.update_theme_icons(false);
+                this_theme.settings_manager.update(|s| s.theme = brunya_settings::ThemePreference::Light).ok();
             }
         });
 
