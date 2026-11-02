@@ -295,7 +295,7 @@ impl WebView {
     }
 
     fn render_html_content(
-        &self,
+        self: &Rc<Self>,
         url: &str,
         title: &str,
         html_body: &str,
@@ -346,22 +346,137 @@ impl WebView {
         info_card.append(&url_badge);
         page_box.append(&info_card);
 
-        // Renderização do texto limpo
-        let text_buffer = TextBuffer::new(None::<&TextTagTable>);
-        let clean_text = Self::strip_html_to_readable_text(html_body);
-        text_buffer.set_text(&clean_text);
+        // 1. Detectar páginas de desafio Anti-Bot (como Startpage Anubis / Cloudflare)
+        let is_challenge = html_body.contains("Verifying your request")
+            || html_body.contains("anubis_challenge")
+            || html_body.contains("cf-browser-verification")
+            || html_body.contains("challenge-running");
 
-        let text_view = TextView::builder()
-            .buffer(&text_buffer)
-            .editable(false)
-            .cursor_visible(false)
-            .wrap_mode(gtk4::WrapMode::Word)
-            .vexpand(true)
-            .hexpand(true)
-            .css_classes(["card"])
-            .build();
+        if is_challenge {
+            let challenge_card = GtkBox::new(Orientation::Vertical, 12);
+            challenge_card.add_css_class("card");
+            challenge_card.set_margin_bottom(16);
 
-        page_box.append(&text_view);
+            let warn_title = Label::builder()
+                .label("⚠️ Desafio Anti-Bot Detectado no Motor de Busca")
+                .css_classes(["title-3", "heading", "warning"])
+                .halign(Align::Start)
+                .build();
+
+            let warn_desc = Label::builder()
+                .label("O motor Startpage solicitou a execução de um desafio JavaScript de verificação (Proof-of-Work anti-bot).\nEscolha um dos motores abaixo para carregar os resultados imediatos desta busca:")
+                .wrap(true)
+                .halign(Align::Start)
+                .build();
+
+            let query_str = Self::extract_query_param(url).unwrap_or_else(|| "pesquisa".to_string());
+            let buttons_row = GtkBox::new(Orientation::Horizontal, 8);
+
+            let ddg_btn = Button::builder()
+                .label("Buscar no DuckDuckGo (Resultados Diretos)")
+                .css_classes(["suggested-action", "pill"])
+                .build();
+            let q_ddg = query_str.clone();
+            let this_ddg = self.clone();
+            ddg_btn.connect_clicked(move |_| {
+                this_ddg.load_url(&format!("https://html.duckduckgo.com/html/?q={}", q_ddg));
+            });
+
+            let google_btn = Button::builder()
+                .label("Buscar no Google")
+                .css_classes(["flat", "pill"])
+                .build();
+            let q_google = query_str.clone();
+            let this_google = self.clone();
+            google_btn.connect_clicked(move |_| {
+                this_google.load_url(&format!("https://www.google.com/search?q={}", q_google));
+            });
+
+            let bing_btn = Button::builder()
+                .label("Buscar no Bing")
+                .css_classes(["flat", "pill"])
+                .build();
+            let q_bing = query_str.clone();
+            let this_bing = self.clone();
+            bing_btn.connect_clicked(move |_| {
+                this_bing.load_url(&format!("https://www.bing.com/search?q={}", q_bing));
+            });
+
+            buttons_row.append(&ddg_btn);
+            buttons_row.append(&google_btn);
+            buttons_row.append(&bing_btn);
+
+            challenge_card.append(&warn_title);
+            challenge_card.append(&warn_desc);
+            challenge_card.append(&buttons_row);
+            page_box.append(&challenge_card);
+        }
+
+        // 2. Extrair e renderizar resultados estruturados de busca
+        let search_results = Self::parse_search_results(html_body);
+        if !search_results.is_empty() {
+            let results_title = Label::builder()
+                .label(&format!("Resultados Encontrados ({})", search_results.len()))
+                .css_classes(["heading", "title-4"])
+                .halign(Align::Start)
+                .margin_bottom(8)
+                .build();
+            page_box.append(&results_title);
+
+            for item in search_results {
+                let card = GtkBox::new(Orientation::Vertical, 4);
+                card.add_css_class("card");
+                card.set_margin_bottom(12);
+
+                let url_lbl = Label::builder()
+                    .label(&item.url)
+                    .css_classes(["caption", "success"])
+                    .halign(Align::Start)
+                    .ellipsize(gtk4::pango::EllipsizeMode::End)
+                    .build();
+
+                let title_btn = Button::builder()
+                    .label(&item.title)
+                    .css_classes(["flat", "title-4", "accent"])
+                    .halign(Align::Start)
+                    .build();
+
+                let target_nav = item.url.clone();
+                let this_nav = self.clone();
+                title_btn.connect_clicked(move |_| {
+                    this_nav.load_url(&target_nav);
+                });
+
+                let snippet_lbl = Label::builder()
+                    .label(&item.snippet)
+                    .wrap(true)
+                    .halign(Align::Start)
+                    .build();
+
+                card.append(&url_lbl);
+                card.append(&title_btn);
+                card.append(&snippet_lbl);
+                page_box.append(&card);
+            }
+        } else if !is_challenge {
+            // 3. Renderização para páginas genéricas (como kernel.org)
+            let text_buffer = TextBuffer::new(None::<&TextTagTable>);
+            let clean_text = Self::strip_html_to_readable_text(html_body);
+            text_buffer.set_text(&clean_text);
+
+            let text_view = TextView::builder()
+                .buffer(&text_buffer)
+                .editable(false)
+                .cursor_visible(false)
+                .wrap_mode(gtk4::WrapMode::Word)
+                .vexpand(true)
+                .hexpand(true)
+                .css_classes(["card"])
+                .build();
+
+            page_box.append(&text_view);
+        }
+
         scroll.set_child(Some(&page_box));
         scroll.set_vexpand(true);
         scroll.set_hexpand(true);
@@ -551,4 +666,62 @@ impl WebView {
 
         cleaned
     }
+
+    fn extract_query_param(url_str: &str) -> Option<String> {
+        if let Ok(parsed) = url::Url::parse(url_str) {
+            for (k, v) in parsed.query_pairs() {
+                if k == "q" || k == "query" || k == "p" || k == "wd" || k == "text" {
+                    let s = v.trim().to_string();
+                    if !s.is_empty() {
+                        return Some(s);
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn parse_search_results(html: &str) -> Vec<ParsedResult> {
+        let mut list = Vec::new();
+
+        // 1. Padrão DuckDuckGo HTML
+        let ddg_re = regex::Regex::new(
+            r#"(?s)<h2[^>]*class="[^"]*result__title[^"]*"[^>]*>\s*<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>\s*</h2>.*?<a[^>]*class="result__snippet[^"]*"[^>]*>(.*?)</a>"#
+        );
+        if let Ok(re) = ddg_re {
+            for cap in re.captures_iter(html) {
+                let mut raw_link = cap.get(1).map_or("", |m| m.as_str()).to_string();
+                if let Ok(parsed) = url::Url::parse(&format!("https:{}", if raw_link.starts_with("//") { &raw_link } else { &raw_link })) {
+                    for (k, v) in parsed.query_pairs() {
+                        if k == "uddg" {
+                            raw_link = v.to_string();
+                            break;
+                        }
+                    }
+                }
+
+                let raw_title = cap.get(2).map_or("", |m| m.as_str());
+                let raw_snippet = cap.get(3).map_or("", |m| m.as_str());
+
+                let title = Self::strip_html_to_readable_text(raw_title).replace('\n', " ").trim().to_string();
+                let snippet = Self::strip_html_to_readable_text(raw_snippet).replace('\n', " ").trim().to_string();
+
+                if !title.is_empty() {
+                    list.push(ParsedResult {
+                        title,
+                        url: raw_link,
+                        snippet,
+                    });
+                }
+            }
+        }
+
+        list
+    }
+}
+
+pub struct ParsedResult {
+    pub title: String,
+    pub url: String,
+    pub snippet: String,
 }

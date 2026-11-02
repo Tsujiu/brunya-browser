@@ -69,7 +69,7 @@ impl Default for SearchEngine {
     fn default() -> Self {
         Self {
             name: "DuckDuckGo".to_string(),
-            query_template: "https://duckduckgo.com/?q=%s".to_string(),
+            query_template: "https://html.duckduckgo.com/html/?q=%s".to_string(),
         }
     }
 }
