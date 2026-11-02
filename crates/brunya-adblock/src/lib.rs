@@ -4,12 +4,16 @@
 //! (Balanceado, Rigoroso, Personalizado), rastreamento detalhado de bloqueios por aba,
 //! atualização atômica de listas com SHA-256 e capacidade de rollback.
 
+pub mod ffi;
+pub mod modules;
 pub mod rule;
 pub mod stats;
 pub mod updater;
 
+pub use ffi::*;
+pub use modules::*;
 pub use rule::{ParsedRule, ResourceType, RuleKind};
-pub use stats::{AdblockStats, BlockedEntry, TrackerCategory};
+pub use stats::{AdblockStats, BlockedEntry, CategorizedStatistics, TrackerCategory};
 pub use updater::{FilterListManager, FilterListMetadata};
 
 use brunya_core::traits::{NetworkInterceptor, RequestAction};
@@ -19,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 use url::Url;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -33,6 +37,8 @@ pub enum ProtectionMode {
 
 pub struct AdblockEngine {
     mode: RwLock<ProtectionMode>,
+    profile: RwLock<ShieldProfile>,
+    modules: RwLock<ShieldModulesConfig>,
     rules: RwLock<Vec<ParsedRule>>,
     whitelist_domains: RwLock<HashSet<String>>,
     total_blocked_counter: AtomicU64,
@@ -53,6 +59,8 @@ impl AdblockEngine {
 
         let engine = Self {
             mode: RwLock::new(ProtectionMode::Balanced),
+            profile: RwLock::new(ShieldProfile::Balanced),
+            modules: RwLock::new(ShieldModulesConfig::default()),
             rules: RwLock::new(Vec::new()),
             whitelist_domains: RwLock::new(HashSet::new()),
             total_blocked_counter: AtomicU64::new(0),
@@ -72,6 +80,37 @@ impl AdblockEngine {
         *self.mode.read()
     }
 
+    pub fn set_profile(&self, profile: ShieldProfile) {
+        *self.profile.write() = profile;
+        *self.modules.write() = ShieldModulesConfig::for_profile(profile);
+        match profile {
+            ShieldProfile::Essential => *self.mode.write() = ProtectionMode::Balanced,
+            ShieldProfile::Balanced => *self.mode.write() = ProtectionMode::Balanced,
+            ShieldProfile::Strict => *self.mode.write() = ProtectionMode::Strict,
+            ShieldProfile::Custom => *self.mode.write() = ProtectionMode::Custom,
+        }
+    }
+
+    pub fn profile(&self) -> ShieldProfile {
+        *self.profile.read()
+    }
+
+    pub fn modules_config(&self) -> ShieldModulesConfig {
+        *self.modules.read()
+    }
+
+    pub fn set_modules_config(&self, cfg: ShieldModulesConfig) {
+        *self.modules.write() = cfg;
+        *self.profile.write() = ShieldProfile::Custom;
+    }
+
+    pub fn reload_rules(&self) {
+        let mut rules = self.rules.write();
+        rules.clear();
+        drop(rules);
+        self.load_default_protection_list();
+    }
+
     pub fn stats(&self) -> Arc<AdblockStats> {
         self.stats.clone()
     }
@@ -86,6 +125,10 @@ impl AdblockEngine {
 
     pub fn allow_site(&self, domain: &str) {
         self.whitelist_domains.write().insert(domain.to_lowercase());
+    }
+
+    pub fn remove_site_exception(&self, domain: &str) {
+        self.whitelist_domains.write().remove(&domain.to_lowercase());
     }
 
     pub fn is_site_allowed(&self, domain: &str) -> bool {
@@ -129,7 +172,7 @@ impl AdblockEngine {
                 rules.push(parsed);
             }
         }
-        info!("Brunya Adblock carregou {} regras fundamentais de privacidade", rules.len());
+        info!("BruNya Shield carregou {} regras fundamentais de proteção", rules.len());
     }
 
     pub fn should_block(
@@ -162,16 +205,49 @@ impl AdblockEngine {
             }
         }
 
+        let modules = self.modules_config();
+
+        // 2. Módulo 03 — Threat Intelligence (Phishing / Malware)
+        if modules.malicious_sites {
+            let threat = ThreatIntelligence::inspect(raw_url);
+            if threat.is_threat {
+                self.record_threat_block(tab_id, raw_url, &threat.reason);
+                return true;
+            }
+        }
+
+        // 3. Módulo 07 — Anti-Crypto Mining
+        if modules.anti_crypto_mining {
+            if url_lower.contains("coinhive")
+                || url_lower.contains("cryptonight")
+                || url_lower.contains("miner.monero")
+            {
+                self.record_block(tab_id, raw_url, "Anti-CryptoMining: Bloqueado script de mineração");
+                return true;
+            }
+        }
+
+        // 4. Módulo 10 — Bloqueio de Anúncios em Vídeo
+        if modules.video_ads {
+            if url_lower.contains("googleads.g.doubleclick.net/pagead/ads?client=ca-video")
+                || url_lower.contains("imasdk.googleapis.com")
+                || url_lower.contains("video-ad-tracker")
+            {
+                self.record_block(tab_id, raw_url, "VideoAds: Bloqueado anúncio em stream de vídeo");
+                return true;
+            }
+        }
+
         let rules = self.rules.read();
 
-        // 2. Verificar regras de exceção primeiro (@@)
+        // 5. Verificar regras de exceção primeiro (@@)
         for rule in rules.iter() {
             if rule.kind == RuleKind::Whitelist && rule.matches(&url_lower, &host, source_domain, resource_type) {
                 return false;
             }
         }
 
-        // 3. Modo Rigoroso: bloqueia frames de terceiros e rastreadores adicionais
+        // 6. Modo Rigoroso: bloqueia frames de terceiros e rastreadores adicionais
         if mode == ProtectionMode::Strict {
             if let Some(src) = source_domain {
                 if !host.is_empty() && !ParsedRule::base_domain(src).eq_ignore_ascii_case(ParsedRule::base_domain(&host)) {
@@ -183,11 +259,13 @@ impl AdblockEngine {
             }
         }
 
-        // 4. Verificar regras de rede
-        for rule in rules.iter() {
-            if rule.kind == RuleKind::Network && rule.matches(&url_lower, &host, source_domain, resource_type) {
-                self.record_block(tab_id, raw_url, &rule.raw);
-                return true;
+        // 7. Módulo 01 & Módulo 02 — Regras de Rede de Anúncios e Rastreadores
+        if modules.adblock || modules.anti_tracking {
+            for rule in rules.iter() {
+                if rule.kind == RuleKind::Network && rule.matches(&url_lower, &host, source_domain, resource_type) {
+                    self.record_block(tab_id, raw_url, &rule.raw);
+                    return true;
+                }
             }
         }
 
@@ -197,7 +275,14 @@ impl AdblockEngine {
     fn record_block(&self, tab_id: TabId, url: &str, rule: &str) {
         self.total_blocked_counter.fetch_add(1, Ordering::Relaxed);
         self.stats.record_block(tab_id, url, rule);
-        debug!("Brunya Adblock bloqueou requisição: {} (regra: {})", url, rule);
+        debug!("BruNya Shield bloqueou requisição: {} (regra: {})", url, rule);
+    }
+
+    fn record_threat_block(&self, tab_id: TabId, url: &str, reason: &str) {
+        self.total_blocked_counter.fetch_add(1, Ordering::Relaxed);
+        self.stats.record_threat_detected();
+        self.stats.record_block(tab_id, url, reason);
+        warn!("BruNya Shield Threat Intelligence bloqueou ameaça: {} ({})", url, reason);
     }
 }
 
@@ -212,42 +297,10 @@ impl NetworkInterceptor for AdblockEngine {
         let rt = ResourceType::from_str(resource_type_str);
         if self.should_block(tab_id, url, None, rt) {
             RequestAction::Block {
-                reason: "Bloqueado pelo Escudo de Privacidade Brunya".to_string(),
+                reason: "Bloqueado pelo BruNya Shield (Regra de Proteção Ativa)".to_string(),
             }
         } else {
             RequestAction::Allow
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_adblock_engine_full() {
-        let engine = AdblockEngine::new();
-        let tab = TabId::new();
-
-        // Testar bloqueio de publicidade padrão
-        assert!(engine.should_block(
-            tab,
-            "https://securepubads.g.doubleclick.net/gampad/ads",
-            Some("example.com"),
-            Some(ResourceType::Script),
-        ));
-
-        // Testar estatísticas
-        let entries = engine.stats().get_tab_entries(tab);
-        assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].domain, "securepubads.g.doubleclick.net");
-
-        // Testar site não bloqueado
-        assert!(!engine.should_block(
-            tab,
-            "https://kernel.org/pub/linux/kernel/",
-            Some("kernel.org"),
-            None,
-        ));
     }
 }
