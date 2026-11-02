@@ -60,6 +60,7 @@ impl BrowserTabBar {
 
             let tab_pill = GtkBox::new(Orientation::Horizontal, 4);
             tab_pill.set_valign(Align::Center);
+            tab_pill.set_width_request(180);
             tab_pill.add_css_class("tab-pill");
             if is_active {
                 tab_pill.add_css_class("active");
@@ -88,16 +89,20 @@ impl BrowserTabBar {
 
             let label = Label::builder()
                 .label(display_title)
-                .max_width_chars(22)
+                .max_width_chars(18)
                 .ellipsize(gtk4::pango::EllipsizeMode::End)
+                .hexpand(true)
+                .halign(Align::Start)
                 .build();
 
-            // Botão de Seleção da Aba (Ícone + Título)
+            // Botão de Seleção da Aba (Ícone + Título com hexpand para empurrar o X para o final)
             let select_btn = Button::builder()
                 .css_classes(["flat", "tab-select-btn"])
+                .hexpand(true)
                 .build();
 
             let select_content = GtkBox::new(Orientation::Horizontal, 6);
+            select_content.set_hexpand(true);
             select_content.append(&icon);
             select_content.append(&label);
             select_btn.set_child(Some(&select_content));
@@ -108,11 +113,12 @@ impl BrowserTabBar {
                 switch_cb(tid);
             });
 
-            // Botão X de Fechamento Independente (sem aninhamento problemático de botão em botão)
+            // Botão X de Fechamento fixado no final (extrema direita) da aba
             let close_btn = Button::builder()
                 .icon_name("window-close-symbolic")
                 .css_classes(["flat", "circular", "tab-close-btn"])
                 .tooltip_text("Fechar aba")
+                .halign(Align::End)
                 .build();
 
             let close_cb = on_close.clone();

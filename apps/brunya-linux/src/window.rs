@@ -55,10 +55,13 @@ impl BrunyaWindow {
         let find_bar = FindBar::new();
         root_box.append(&find_bar.container);
 
-        // Stack para visualização do conteúdo das abas
-        let tab_stack = Stack::new();
-        tab_stack.set_vexpand(true);
-        tab_stack.set_hexpand(true);
+        // Stack para visualização do conteúdo das abas com transição fluida e elegante
+        let tab_stack = Stack::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .transition_type(gtk4::StackTransitionType::Crossfade)
+            .transition_duration(250)
+            .build();
         root_box.append(&tab_stack);
 
         let initial_title = if is_private {
