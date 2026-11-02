@@ -69,17 +69,20 @@ impl WebView {
                 .hexpand(true)
                 .build()
         };
+        // Configurar cor de fundo escura nativa no WebKit para evitar tela branca ao carregar
+        let dark_bg = gdk4::RGBA::new(0.06, 0.07, 0.09, 1.0);
+        webkit_view.set_background_color(&dark_bg);
         webkit_view.set_visible(false);
         container.append(&webkit_view);
 
-        // Configurar WebKit Settings
+        // Configurar WebKit Settings com User-Agent padrão e aceleração
         if let Some(wk_settings) = webkit6::prelude::WebViewExt::settings(&webkit_view) {
             wk_settings.set_enable_developer_extras(true);
             wk_settings.set_enable_page_cache(true);
             wk_settings.set_javascript_can_access_clipboard(true);
             wk_settings.set_enable_smooth_scrolling(true);
             wk_settings.set_user_agent(Some(
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36 Brunya/0.3.0",
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
             ));
         }
 
@@ -106,7 +109,7 @@ impl WebView {
             );
             content_manager.add_script(&yt_user_script);
 
-            // Compilar e registrar o filtro de conteúdo nativo do WebKit
+            // Carregar ou compilar o filtro de conteúdo nativo do WebKit
             let home = std::env::var("HOME").unwrap_or_default();
             let filter_store_path = format!("{}/.local/share/brunya/filters/webkit", home);
             std::fs::create_dir_all(&filter_store_path).ok();
@@ -117,10 +120,19 @@ impl WebView {
             ));
 
             let cm_clone = content_manager.clone();
-            filter_store.save("brunya_shield_rules", &rules_bytes, None::<&gio::Cancellable>, move |res| {
+            let store_clone = filter_store.clone();
+            filter_store.load("brunya_shield_rules", None::<&gio::Cancellable>, move |res| {
                 if let Ok(filter) = res {
                     cm_clone.add_filter(&filter);
-                    info!("BruNya Shield ativou o filtro de conteúdo nativo do WebKit com sucesso");
+                    info!("BruNya Shield carregou o filtro de conteúdo compilado imediatamente");
+                } else {
+                    let cm_fallback = cm_clone.clone();
+                    store_clone.save("brunya_shield_rules", &rules_bytes, None::<&gio::Cancellable>, move |save_res| {
+                        if let Ok(filter) = save_res {
+                            cm_fallback.add_filter(&filter);
+                            info!("BruNya Shield compilou e registrou o filtro de conteúdo nativo do WebKit");
+                        }
+                    });
                 }
             });
         }

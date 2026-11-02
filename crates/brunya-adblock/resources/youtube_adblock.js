@@ -1,48 +1,8 @@
-// BruNya Shield — YouTube Native AdBlocker Scriptlet
+// BruNya Shield — YouTube Native AdBlocker & Companion Cleaner Scriptlet
 
 (function() {
     'use strict';
 
-    // 1. Interceptar JSON.parse para limpar adPlacements e adSlots da resposta da API do YouTube
-    const origParse = JSON.parse;
-    JSON.parse = function() {
-        const data = origParse.apply(this, arguments);
-        if (data && typeof data === 'object') {
-            if (data.adPlacements) data.adPlacements = [];
-            if (data.adSlots) data.adSlots = [];
-            if (data.playerAds) data.playerAds = [];
-            if (data.instreamAdPlayer) delete data.instreamAdPlayer;
-        }
-        return data;
-    };
-
-    // 2. Interceptar window.fetch para interceptar requisições /youtubei/v1/player
-    if (typeof window.fetch === 'function') {
-        const origFetch = window.fetch;
-        window.fetch = async function(...args) {
-            const response = await origFetch.apply(this, args);
-            const url = (args[0] && args[0].url) || args[0] || '';
-            if (typeof url === 'string' && url.includes('/youtubei/v1/player')) {
-                try {
-                    const clone = response.clone();
-                    const json = await clone.json();
-                    if (json && typeof json === 'object') {
-                        if (json.adPlacements) json.adPlacements = [];
-                        if (json.adSlots) json.adSlots = [];
-                        if (json.playerAds) json.playerAds = [];
-                        return new Response(JSON.stringify(json), {
-                            status: response.status,
-                            statusText: response.statusText,
-                            headers: response.headers
-                        });
-                    }
-                } catch (e) {}
-            }
-            return response;
-        };
-    }
-
-    // 3. Ocultação e remoção contínua de anúncios visuais e Companion Ads
     const cleanAds = () => {
         const adSelectors = [
             'ytd-action-companion-ad-renderer',
@@ -69,7 +29,7 @@
             }
         }
 
-        // Pular anúncios de vídeo em execução
+        // Pular anúncios de vídeo em reprodução
         const player = document.querySelector('#movie_player, .html5-video-player');
         const video = document.querySelector('video');
         if (player && player.classList.contains('ad-showing')) {
@@ -86,15 +46,18 @@
         }
     };
 
-    setInterval(cleanAds, 150);
+    setInterval(cleanAds, 180);
 
     if (document.body) {
         const observer = new MutationObserver(cleanAds);
         observer.observe(document.body, { childList: true, subtree: true });
     } else {
         window.addEventListener('DOMContentLoaded', () => {
+            cleanAds();
             const observer = new MutationObserver(cleanAds);
-            observer.observe(document.body, { childList: true, subtree: true });
+            if (document.body) {
+                observer.observe(document.body, { childList: true, subtree: true });
+            }
         });
     }
 })();
