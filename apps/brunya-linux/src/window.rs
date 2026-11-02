@@ -10,7 +10,7 @@ use brunya_settings::SettingsManager;
 use brunya_storage::StorageManager;
 use brunya_tabs::TabManager;
 use gtk4::prelude::*;
-use gtk4::{Box as GtkBox, EventControllerKey, Orientation, Stack};
+use gtk4::{Box as GtkBox, EventControllerKey, GestureClick, Orientation, PropagationPhase, Stack};
 use libadwaita::Application;
 use libadwaita::ApplicationWindow;
 use std::cell::RefCell;
@@ -306,6 +306,22 @@ impl BrunyaWindow {
         }
     }
 
+    pub fn go_back(self: &Rc<Self>) {
+        if let Some(active) = self.tab_manager.active_tab() {
+            if let Some(view) = self.tab_views.borrow().get(&active.id) {
+                view.go_back();
+            }
+        }
+    }
+
+    pub fn go_forward(self: &Rc<Self>) {
+        if let Some(active) = self.tab_manager.active_tab() {
+            if let Some(view) = self.tab_views.borrow().get(&active.id) {
+                view.go_forward();
+            }
+        }
+    }
+
     pub fn open_downloads(self: &Rc<Self>) {
         self.open_new_tab("brunya://downloads", &t!("downloads.title"));
     }
@@ -348,21 +364,13 @@ impl BrunyaWindow {
         // 2. Botão Voltar
         let this_back = self.clone();
         self.header.back_btn.connect_clicked(move |_| {
-            if let Some(active) = this_back.tab_manager.active_tab() {
-                if let Some(view) = this_back.tab_views.borrow().get(&active.id) {
-                    view.go_back();
-                }
-            }
+            this_back.go_back();
         });
 
         // 3. Botão Avançar
         let this_fwd = self.clone();
         self.header.forward_btn.connect_clicked(move |_| {
-            if let Some(active) = this_fwd.tab_manager.active_tab() {
-                if let Some(view) = this_fwd.tab_views.borrow().get(&active.id) {
-                    view.go_forward();
-                }
-            }
+            this_fwd.go_forward();
         });
 
         // 3.1. Alternador de Tema Claro / Escuro (Sol / Lua)
@@ -523,5 +531,24 @@ impl BrunyaWindow {
         });
 
         self.window.add_controller(key_controller);
+
+        // Suporte aos botões laterais do mouse (Botão 8: Voltar / Back, Botão 9: Avançar / Forward)
+        let mouse_controller = GestureClick::new();
+        mouse_controller.set_button(0); // Escutar todos os botões do mouse
+        mouse_controller.set_propagation_phase(PropagationPhase::Capture);
+
+        let this_mouse = self.clone();
+        mouse_controller.connect_pressed(move |gesture, _n_press, _x, _y| {
+            let button = gesture.current_button();
+            if button == 8 {
+                this_mouse.go_back();
+                gesture.set_state(gtk4::EventSequenceState::Claimed);
+            } else if button == 9 {
+                this_mouse.go_forward();
+                gesture.set_state(gtk4::EventSequenceState::Claimed);
+            }
+        });
+
+        self.window.add_controller(mouse_controller);
     }
 }
