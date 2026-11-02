@@ -1393,14 +1393,6 @@
   },
   {
     "trigger": {
-      "url-filter": ".*google_ads.*"
-    },
-    "action": {
-      "type": "block"
-    }
-  },
-  {
-    "trigger": {
       "url-filter": ".*banner_ads.*"
     },
     "action": {
@@ -1655,6 +1647,22 @@
     "action": {
       "type": "css-display-none",
       "selector": "#player-ads"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*google\\.(com|com\\.br)/(search|sorry|recaptcha).*"
+    },
+    "action": {
+      "type": "ignore-previous-rules"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*gstatic\\.com/recaptcha.*"
+    },
+    "action": {
+      "type": "ignore-previous-rules"
     }
   }
 ]

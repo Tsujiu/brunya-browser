@@ -12,7 +12,7 @@ pub struct SearchEngineDef {
 pub static ALL_SEARCH_ENGINES: &[SearchEngineDef] = &[
     // Motor Principal Recomendado por Padrão
     SearchEngineDef { id: "startpage", name: "Startpage", category: "Privacidade", query_template: "https://www.startpage.com/sp/search?query=%s", glyph: "SP" },
-    SearchEngineDef { id: "google", name: "Google", category: "Geral", query_template: "https://www.google.com/search?q=%s", glyph: "G" },
+    SearchEngineDef { id: "google", name: "Google", category: "Geral", query_template: "https://www.google.com/search?q=%s&hl=pt-BR", glyph: "G" },
     SearchEngineDef { id: "duckduckgo", name: "DuckDuckGo", category: "Privacidade", query_template: "https://duckduckgo.com/?q=%s", glyph: "🦆" },
     SearchEngineDef { id: "bing", name: "Microsoft Bing", category: "Geral", query_template: "https://www.bing.com/search?q=%s", glyph: "b" },
     SearchEngineDef { id: "brave", name: "Brave Search", category: "Privacidade", query_template: "https://search.brave.com/search?q=%s", glyph: "🦁" },
