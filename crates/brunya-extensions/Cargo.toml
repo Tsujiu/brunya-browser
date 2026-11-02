@@ -1,0 +1,28 @@
+[package]
+name = "brunya-extensions"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Sistema de extensões de terceiros do Brunya Browser (Polyfill WebKitGTK)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+url.workspace = true
+thiserror.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+parking_lot.workspace = true
+regex.workspace = true
+ring.workspace = true
+ureq.workspace = true
+glib.workspace = true
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+brunya-core = { path = "../brunya-core" }
+brunya-storage = { path = "../brunya-storage" }
+brunya-i18n = { path = "../brunya-i18n" }
+
+[dev-dependencies]
+tempfile = "3.14"

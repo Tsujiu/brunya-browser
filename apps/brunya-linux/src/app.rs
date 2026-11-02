@@ -1,3 +1,4 @@
+use brunya_extensions::ExtensionSystem;
 use crate::window::BrunyaWindow;
 use brunya_adblock::AdblockEngine;
 use brunya_diagnostics::{MemoryPressureLevel, SystemMemorySnapshot};
@@ -20,6 +21,7 @@ pub struct BrunyaApp {
     adblock_engine: Arc<AdblockEngine>,
     storage_manager: Arc<StorageManager>,
     settings_manager: Arc<SettingsManager>,
+    extension_system: Option<Arc<ExtensionSystem>>,
     initial_urls: Vec<String>,
     main_window: RefCell<Option<Rc<BrunyaWindow>>>,
 }
@@ -48,6 +50,17 @@ impl BrunyaApp {
         // Gerenciador de abas
         let tab_manager = Arc::new(TabManager::new());
 
+        // Sistema de extensões
+        let extension_system = {
+            let ext_data_dir = data_dir.join("extensions");
+            let sys = ExtensionSystem::new(ext_data_dir, storage_manager.clone());
+            let mgr = Arc::new(sys);
+            // Carregar extensões ativas na inicialização
+            mgr.manager.load_active_extensions_on_startup();
+            info!("Sistema de extensões inicializado");
+            Some(mgr)
+        };
+
         // Aplicar preferências de idioma
         let lang = settings_manager.get().language;
         if lang != "system" {
@@ -60,6 +73,7 @@ impl BrunyaApp {
             adblock_engine,
             storage_manager,
             settings_manager,
+            extension_system,
             initial_urls,
             main_window: RefCell::new(None),
         });
@@ -103,6 +117,7 @@ impl BrunyaApp {
                     this_act.adblock_engine.clone(),
                     this_act.storage_manager.clone(),
                     this_act.settings_manager.clone(),
+                    this_act.extension_system.clone(),
                     false,
                 );
 
@@ -149,6 +164,7 @@ impl BrunyaApp {
                     app.adblock_engine.clone(),
                     app.storage_manager.clone(),
                     app.settings_manager.clone(),
+                    None, // Sem extensões em janela privada
                     true,
                 );
                 priv_win.present();
@@ -215,6 +231,18 @@ impl BrunyaApp {
             }
         });
         self.app.add_action(&action_cfg);
+
+        // Ação: Extensões
+        let action_ext = SimpleAction::new("open_extensions", None);
+        let w_ext = win_weak.clone();
+        action_ext.connect_activate(move |_, _| {
+            if let Some(app) = w_ext.upgrade() {
+                if let Some(ref win) = *app.main_window.borrow() {
+                    win.open_new_tab("brunya://extensions", &t!("extensions.extensions_title"));
+                }
+            }
+        });
+        self.app.add_action(&action_ext);
 
         // Ação: Sobre
         let action_about = SimpleAction::new("open_about", None);

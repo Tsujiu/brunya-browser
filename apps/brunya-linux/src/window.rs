@@ -1,3 +1,4 @@
+use brunya_extensions::ExtensionSystem;
 use crate::engine::WebView;
 use crate::ui::find_bar::FindBar;
 use crate::ui::header::BrowserHeader;
@@ -30,6 +31,7 @@ pub struct BrunyaWindow {
     adblock_engine: Arc<AdblockEngine>,
     storage_manager: Arc<StorageManager>,
     settings_manager: Arc<SettingsManager>,
+    extension_system: Option<Arc<ExtensionSystem>>,
 }
 
 impl BrunyaWindow {
@@ -39,6 +41,7 @@ impl BrunyaWindow {
         adblock_engine: Arc<AdblockEngine>,
         storage_manager: Arc<StorageManager>,
         settings_manager: Arc<SettingsManager>,
+        extension_system: Option<Arc<ExtensionSystem>>,
         is_private: bool,
     ) -> Rc<Self> {
         let root_box = GtkBox::new(Orientation::Vertical, 0);
@@ -101,6 +104,7 @@ impl BrunyaWindow {
             adblock_engine,
             storage_manager,
             settings_manager,
+            extension_system,
         });
 
         brunya_window.setup_event_handlers();
@@ -127,6 +131,19 @@ impl BrunyaWindow {
     }
 
     pub fn open_new_tab(self: &Rc<Self>, url: &str, title: &str) {
+        // When opening settings, reuse any existing newtab instead of adding a new tab
+        if url == "brunya://settings" {
+            if let Some(newtab) = self.tab_manager.list_tabs().iter().find(|t| t.url == "brunya://newtab") {
+                self.tab_manager.update_tab_metadata(newtab.id, "brunya://settings", title, None, 0);
+                if let Some(view) = self.tab_views.borrow().get(&newtab.id) {
+                    view.load_url(url);
+                    self.switch_to_tab(newtab.id);
+                    self.refresh_tab_bar();
+                    return;
+                }
+            }
+        }
+
         let tab_desc = self.tab_manager.open_tab(url, title);
         let tid = tab_desc.id;
 
@@ -143,6 +160,7 @@ impl BrunyaWindow {
             self.adblock_engine.clone(),
             self.storage_manager.clone(),
             self.settings_manager.clone(),
+            self.extension_system.clone(),
             self.is_private,
             on_state_changed,
         );
@@ -422,6 +440,12 @@ impl BrunyaWindow {
             this_new.open_new_tab("brunya://newtab", &t!("common.new_tab"));
         });
 
+        // 7.1. Botão Extensões
+        let this_ext = self.clone();
+        self.header.extensions_btn.connect_clicked(move |_| {
+            this_ext.open_new_tab("brunya://extensions", &t!("extensions.extensions_title"));
+        });
+
         // 8. Botão Escudo de Privacidade
         let this_shield = self.clone();
         self.header.shield_btn.connect_clicked(move |btn| {
@@ -447,6 +471,7 @@ impl BrunyaWindow {
         menu_model.append(Some(&t!("common.downloads")), Some("app.open_downloads"));
         menu_model.append(Some(&t!("common.settings")), Some("app.open_settings"));
         menu_model.append(Some(&t!("common.about")), Some("app.open_about"));
+        menu_model.append(Some(&t!("extensions.extensions_title")), Some("app.open_extensions"));
         menu_model.append(Some(&t!("common.quit")), Some("app.quit"));
         self.header.menu_btn.set_menu_model(Some(&menu_model));
     }
@@ -509,6 +534,10 @@ impl BrunyaWindow {
                     }
                     gdk4::Key::b => {
                         this_key.open_bookmarks();
+                        return glib::Propagation::Stop;
+                    }
+                    gdk4::Key::e if is_shift => {
+                        this_key.open_new_tab("brunya://extensions", &t!("extensions.extensions_title"));
                         return glib::Propagation::Stop;
                     }
                     gdk4::Key::f => {

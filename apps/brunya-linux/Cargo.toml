@@ -15,6 +15,7 @@ brunya-privacy.workspace = true
 brunya-tabs.workspace = true
 brunya-settings.workspace = true
 brunya-diagnostics.workspace = true
+brunya-extensions.workspace = true
 
 gtk4.workspace = true
 libadwaita.workspace = true

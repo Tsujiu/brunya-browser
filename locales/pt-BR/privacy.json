@@ -9,6 +9,8 @@
   "mode_custom": "Personalizado",
   "cookies_blocked": "Cookies de terceiros bloqueados",
   "fingerprint_protection": "Proteção contra impressão digital (Fingerprinting)",
+  "do_not_track": "Não Rastrear (Do Not Track)",
+  "do_not_track_desc": "Envia cabeçalho 'DNT: 1' para todos os sites solicitando não rastreamento",
   "clear_browsing_data": "Limpar Dados de Navegação",
   "clear_cache": "Limpar Cache",
   "clear_cookies": "Limpar Cookies",

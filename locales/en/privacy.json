@@ -9,6 +9,8 @@
   "mode_custom": "Custom",
   "cookies_blocked": "Third-party cookies blocked",
   "fingerprint_protection": "Fingerprinting protection",
+  "do_not_track": "Do Not Track (DNT)",
+  "do_not_track_desc": "Sends 'DNT: 1' header to all sites requesting not to be tracked",
   "clear_browsing_data": "Clear Browsing Data",
   "clear_cache": "Clear Cache",
   "clear_cookies": "Clear Cookies",

@@ -34,8 +34,9 @@ pub enum ThemePreference {
 pub enum SecureDnsMode {
     #[default]
     System,
-    Cloudflare, // https://cloudflare-dns.com/dns-query
-    Quad9,      // https://dns.quad9.net/dns-query (Focado em privacidade sem logs)
+    Cloudflare,  // https://cloudflare-dns.com/dns-query (1.1.1.1)
+    Quad9,       // https://dns.quad9.net/dns-query (9.9.9.9)
+    Google,      // https://dns.google/dns-query (8.8.8.8)
     Custom,
 }
 
@@ -44,17 +45,25 @@ impl SecureDnsMode {
         match self {
             SecureDnsMode::System => "DNS Padrão do Sistema Operacional",
             SecureDnsMode::Cloudflare => "Cloudflare (1.1.1.1)",
-            SecureDnsMode::Quad9 => "Quad9 (Focado em Privacidade e Proteção)",
-            SecureDnsMode::Custom => "Provedor DNS Personalizado",
+            SecureDnsMode::Quad9 => "Quad9 (9.9.9.9)",
+            SecureDnsMode::Google => "Google (8.8.8.8)",
+            SecureDnsMode::Custom => "Personalizado",
         }
     }
 
-    pub fn endpoint_url(&self, _custom: &str) -> Option<&'static str> {
+    pub fn endpoint_url(&self, custom_url: &str) -> Option<String> {
         match self {
             SecureDnsMode::System => None,
-            SecureDnsMode::Cloudflare => Some("https://cloudflare-dns.com/dns-query"),
-            SecureDnsMode::Quad9 => Some("https://dns.quad9.net/dns-query"),
-            SecureDnsMode::Custom => None,
+            SecureDnsMode::Cloudflare => Some("https://cloudflare-dns.com/dns-query".to_string()),
+            SecureDnsMode::Quad9 => Some("https://dns.quad9.net/dns-query".to_string()),
+            SecureDnsMode::Google => Some("https://dns.google/dns-query".to_string()),
+            SecureDnsMode::Custom => {
+                if custom_url.is_empty() {
+                    None
+                } else {
+                    Some(custom_url.to_string())
+                }
+            }
         }
     }
 }
@@ -74,6 +83,13 @@ impl Default for SearchEngine {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum ShortcutDisplayMode {
+    #[default]
+    IconAndLabel,
+    IconOnly,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserSettings {
     pub language: String,
@@ -87,6 +103,8 @@ pub struct UserSettings {
     pub block_third_party_cookies: bool,
     pub hardware_acceleration: bool,
     pub do_not_track: bool,
+    pub show_shortcuts_on_newtab: bool,
+    pub shortcut_display_mode: ShortcutDisplayMode,
     pub secure_dns_mode: SecureDnsMode,
     pub secure_dns_custom_url: String,
 }
@@ -105,6 +123,8 @@ impl Default for UserSettings {
             block_third_party_cookies: true,
             hardware_acceleration: true,
             do_not_track: true,
+            show_shortcuts_on_newtab: true,
+            shortcut_display_mode: ShortcutDisplayMode::default(),
             secure_dns_mode: SecureDnsMode::Quad9, // Padrão com foco em privacidade
             secure_dns_custom_url: String::new(),
         }
