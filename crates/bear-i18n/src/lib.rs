@@ -87,6 +87,7 @@ impl I18nManager {
         Self::merge_json(&mut pt_br_map, "settings", include_str!("../../../locales/pt-BR/settings.json"));
         Self::merge_json(&mut pt_br_map, "privacy", include_str!("../../../locales/pt-BR/privacy.json"));
         Self::merge_json(&mut pt_br_map, "errors", include_str!("../../../locales/pt-BR/errors.json"));
+        Self::merge_json(&mut pt_br_map, "downloads", include_str!("../../../locales/pt-BR/downloads.json"));
         self.catalogues.insert(Language::PtBr, pt_br_map);
 
         let mut en_map = HashMap::new();
@@ -94,6 +95,7 @@ impl I18nManager {
         Self::merge_json(&mut en_map, "settings", include_str!("../../../locales/en/settings.json"));
         Self::merge_json(&mut en_map, "privacy", include_str!("../../../locales/en/privacy.json"));
         Self::merge_json(&mut en_map, "errors", include_str!("../../../locales/en/errors.json"));
+        Self::merge_json(&mut en_map, "downloads", include_str!("../../../locales/en/downloads.json"));
         self.catalogues.insert(Language::En, en_map);
     }
 

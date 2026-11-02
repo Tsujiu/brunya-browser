@@ -12,8 +12,10 @@ pub struct BrowserHeader {
     pub stop_btn: Button,
     pub security_btn: Button,
     pub address_entry: Entry,
+    pub bookmark_btn: Button,
     pub shield_btn: Button,
     pub shield_label: Label,
+    pub downloads_btn: Button,
     pub new_tab_btn: Button,
     pub menu_btn: MenuButton,
 }
@@ -54,7 +56,7 @@ impl BrowserHeader {
         nav_box.append(&stop_btn);
         container.pack_start(&nav_box);
 
-        // 2. Barra de Endereço Central com Indicador de Segurança e Escudo
+        // 2. Barra de Endereço Central com Indicador de Segurança, Favorito e Escudo
         let address_box = GtkBox::new(Orientation::Horizontal, 0);
         address_box.set_hexpand(true);
         address_box.set_margin_start(16);
@@ -70,6 +72,12 @@ impl BrowserHeader {
         let address_entry = Entry::builder()
             .placeholder_text(&t!("common.address_placeholder"))
             .hexpand(true)
+            .build();
+
+        let bookmark_btn = Button::builder()
+            .icon_name("non-starred-symbolic")
+            .tooltip_text(&t!("common.add_bookmark"))
+            .css_classes(["flat"])
             .build();
 
         // Botão do Escudo de Privacidade com Contador de Rastreadores Bloqueados
@@ -91,11 +99,17 @@ impl BrowserHeader {
 
         address_box.append(&security_btn);
         address_box.append(&address_entry);
+        address_box.append(&bookmark_btn);
         address_box.append(&shield_btn);
         container.set_title_widget(Some(&address_box));
 
-        // 3. Botões da Direita: Nova Aba e Menu Principal
+        // 3. Botões da Direita: Downloads, Nova Aba e Menu Principal
         let right_box = GtkBox::new(Orientation::Horizontal, 4);
+
+        let downloads_btn = Button::builder()
+            .icon_name("folder-download-symbolic")
+            .tooltip_text(&t!("common.downloads"))
+            .build();
 
         let new_tab_btn = Button::builder()
             .icon_name("tab-new-symbolic")
@@ -107,6 +121,7 @@ impl BrowserHeader {
             .tooltip_text("Menu do BEAR")
             .build();
 
+        right_box.append(&downloads_btn);
         right_box.append(&new_tab_btn);
         right_box.append(&menu_btn);
         container.pack_end(&right_box);
@@ -119,8 +134,10 @@ impl BrowserHeader {
             stop_btn,
             security_btn,
             address_entry,
+            bookmark_btn,
             shield_btn,
             shield_label,
+            downloads_btn,
             new_tab_btn,
             menu_btn,
         }

@@ -137,6 +137,42 @@ impl BearApp {
         });
         self.app.add_action(&action_hist);
 
+        // Ação: Downloads
+        let action_dl = SimpleAction::new("open_downloads", None);
+        let w_dl = win_weak.clone();
+        action_dl.connect_activate(move |_, _| {
+            if let Some(app) = w_dl.upgrade() {
+                if let Some(ref win) = *app.main_window.borrow() {
+                    win.open_downloads();
+                }
+            }
+        });
+        self.app.add_action(&action_dl);
+
+        // Ação: Favoritos
+        let action_bm = SimpleAction::new("open_bookmarks", None);
+        let w_bm = win_weak.clone();
+        action_bm.connect_activate(move |_, _| {
+            if let Some(app) = w_bm.upgrade() {
+                if let Some(ref win) = *app.main_window.borrow() {
+                    win.open_bookmarks();
+                }
+            }
+        });
+        self.app.add_action(&action_bm);
+
+        // Ação: Duplicar Aba
+        let action_dup = SimpleAction::new("duplicate_tab", None);
+        let w_dup = win_weak.clone();
+        action_dup.connect_activate(move |_, _| {
+            if let Some(app) = w_dup.upgrade() {
+                if let Some(ref win) = *app.main_window.borrow() {
+                    win.duplicate_current_tab();
+                }
+            }
+        });
+        self.app.add_action(&action_dup);
+
         // Ação: Configurações
         let action_cfg = SimpleAction::new("open_settings", None);
         let w3 = win_weak.clone();
