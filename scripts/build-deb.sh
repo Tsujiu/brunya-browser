@@ -63,7 +63,7 @@ echo "• Gerando documentação de copyright e changelog Debian..."
 cat << 'EOF' > "$STAGING_DIR/usr/share/doc/brunya-browser/copyright"
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: Brunya Browser
-Source: https://github.com/brunya-browser/brunya-browser
+Source: https://github.com/Tsujiu/brunya-browser
 
 Files: *
 Copyright: 2026 Brunya Browser Team <142347573+Tsujiu@users.noreply.github.com>

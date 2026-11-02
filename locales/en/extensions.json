@@ -68,5 +68,9 @@
   "install_confirm_title": "Adicionar extensão?",
   "install_confirm_desc": "{name} solicita as seguintes permissões:",
   "install_cancel": "Cancelar instalação",
-  "install_accept": "Adicionar extensão"
+  "install_accept": "Adicionar extensão",
+  "store_placeholder": "Chrome Web Store, Edge, Opera or Firefox link, or the extension id",
+  "store_install": "Install from store",
+  "store_installing": "Downloading extension…",
+  "store_hint": "Paste a store link. Brunya downloads the official package, shows the permissions and installs it."
 }

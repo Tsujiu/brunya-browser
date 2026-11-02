@@ -19,7 +19,7 @@ version = "0.3.0"
 edition = "2021"
 authors = ["Brunya Browser Team <142347573+Tsujiu@users.noreply.github.com>"]
 license = "Apache-2.0"
-repository = "https://github.com/brunya-browser/brunya-browser"
+repository = "https://github.com/Tsujiu/brunya-browser"
 homepage = "https://brunyabrowser.org"
 description = "Brunya Browser — Navegador web rápido, leve e privado para Linux"
 

@@ -14,6 +14,7 @@ use std::sync::Arc;
 use tracing::{info, warn};
 use webkit6::prelude::*;
 use webkit6::{LoadEvent, NetworkSession, WebView as WebKitWebView};
+use crate::engine::extension_host::ExtensionBridge;
 use crate::engine::FaviconManager;
 
 pub struct WebView {
@@ -28,6 +29,8 @@ pub struct WebView {
     storage: Arc<StorageManager>,
     settings: Arc<SettingsManager>,
     extension_system: Option<Arc<ExtensionSystem>>,
+    extension_bridge: Option<Rc<ExtensionBridge>>,
+    on_extensions_changed: Rc<dyn Fn(&str)>,
     _is_private: bool,
     is_loading: AtomicBool,
     on_state_changed: Rc<dyn Fn(&NavigationState)>,
@@ -40,8 +43,10 @@ impl WebView {
         storage: Arc<StorageManager>,
         settings: Arc<SettingsManager>,
         extension_system: Option<Arc<ExtensionSystem>>,
+        extension_bridge: Option<Rc<ExtensionBridge>>,
         is_private: bool,
         on_state_changed: Rc<dyn Fn(&NavigationState)>,
+        on_extensions_changed: Rc<dyn Fn(&str)>,
     ) -> Rc<Self> {
         let container = GtkBox::new(Orientation::Vertical, 0);
         container.set_vexpand(true);
@@ -162,6 +167,10 @@ impl WebView {
             ..Default::default()
         };
 
+        if let Some(bridge) = &extension_bridge {
+            bridge.attach_content_view(&webkit_view, tab_id.0);
+        }
+
         let view = Rc::new(Self {
             container,
             tab_id,
@@ -174,6 +183,8 @@ impl WebView {
             storage: storage.clone(),
             settings,
             extension_system,
+            extension_bridge: extension_bridge.clone(),
+            on_extensions_changed,
             _is_private: is_private,
             is_loading: AtomicBool::new(false),
             on_state_changed: on_state_changed.clone(),
@@ -267,6 +278,9 @@ impl WebView {
                     pb_load.set_visible(true);
                     if let Some(this) = this_load.upgrade() {
                         this.is_loading.store(true, Ordering::SeqCst);
+                        if let Some(bridge) = &this.extension_bridge {
+                            bridge.reset_injection(&this.webkit_view);
+                        }
                         let mut state = this.current_state.borrow_mut();
                         state.is_loading = true;
                         state.can_go_back = v.can_go_back();
@@ -274,10 +288,21 @@ impl WebView {
                         (this.on_state_changed)(&state);
                     }
                 }
+                LoadEvent::Committed => {
+                    if let Some(this) = this_load.upgrade() {
+                        if let (Some(bridge), Some(uri)) = (this.extension_bridge.clone(), v.uri()) {
+                            bridge.inject_content(&this.webkit_view, uri.as_str(), "document_start");
+                            bridge.inject_content(&this.webkit_view, uri.as_str(), "document_end");
+                        }
+                    }
+                }
                 LoadEvent::Finished => {
                     pb_load.set_visible(false);
                     if let Some(this) = this_load.upgrade() {
                         this.is_loading.store(false, Ordering::SeqCst);
+                        if let (Some(bridge), Some(uri)) = (this.extension_bridge.clone(), v.uri()) {
+                            bridge.inject_content(&this.webkit_view, uri.as_str(), "document_idle");
+                        }
                         let mut state = this.current_state.borrow_mut();
                         state.is_loading = false;
                         state.can_go_back = v.can_go_back();
@@ -433,12 +458,14 @@ impl WebView {
                 let title = t!("extensions.extensions_title");
                 let widget = if let Some(ref ext_sys) = self.extension_system {
                     let self_clone = self.clone();
+                    let on_changed = self.on_extensions_changed.clone();
                     crate::ui::internal_views::build_extensions_view(
                         ext_sys.clone(),
                         self.storage.clone(),
                         move |target| {
                             self_clone.load_url(target);
                         },
+                        move |event| on_changed(event),
                     )
                 } else {
                     let fallback = GtkBox::new(Orientation::Vertical, 0);
