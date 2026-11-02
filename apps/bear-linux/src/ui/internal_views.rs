@@ -8,6 +8,7 @@ use gtk4::{
 };
 use libadwaita::prelude::*;
 use libadwaita::{ActionRow, PreferencesGroup, PreferencesPage, SwitchRow};
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -247,12 +248,18 @@ pub fn build_history_view<F: Fn(&str) + 'static>(
         .halign(Align::Start)
         .build();
 
+    let search_entry = Entry::builder()
+        .placeholder_text("Pesquisar no histórico...")
+        .width_request(300)
+        .build();
+
     let clear_btn = Button::builder()
         .label(&t!("privacy.clear_browsing_data"))
-        .css_classes(["destructive-action"])
+        .css_classes(["destructive-action", "pill"])
         .build();
 
     header_box.append(&title);
+    header_box.append(&search_entry);
     header_box.append(&clear_btn);
     container.append(&header_box);
 
@@ -261,7 +268,8 @@ pub fn build_history_view<F: Fn(&str) + 'static>(
         .css_classes(["boxed-list"])
         .build();
 
-    let history_items = storage_mgr.get_recent_history(100).unwrap_or_default();
+    let history_items = storage_mgr.get_recent_history(200).unwrap_or_default();
+    let row_widgets = Rc::new(RefCell::new(Vec::<(ActionRow, String, String)>::new()));
 
     if history_items.is_empty() {
         let empty_label = Label::builder()
@@ -274,7 +282,7 @@ pub fn build_history_view<F: Fn(&str) + 'static>(
         for item in history_items {
             let row = ActionRow::builder()
                 .title(&item.title)
-                .subtitle(&format!("{} • {} visitas", item.url, item.visit_count))
+                .subtitle(&format!("{} • {} visitas • {}", item.url, item.visit_count, item.last_visit.format("%d/%m/%Y %H:%M")))
                 .activatable(true)
                 .build();
 
@@ -284,6 +292,124 @@ pub fn build_history_view<F: Fn(&str) + 'static>(
                 nav_cb(&target_url);
             });
 
+            row_widgets.borrow_mut().push((row.clone(), item.title.to_lowercase(), item.url.to_lowercase()));
+            list_box.append(&row);
+        }
+        container.append(&list_box);
+    }
+
+    // Filtragem em tempo real ao digitar na busca
+    let rows_filter = row_widgets;
+    search_entry.connect_changed(move |entry| {
+        let query = entry.text().to_lowercase();
+        for (row, title, url) in rows_filter.borrow().iter() {
+            let matches = query.is_empty() || title.contains(&query) || url.contains(&query);
+            row.set_visible(matches);
+        }
+    });
+
+    let st_clear = storage_mgr.clone();
+    let list_box_clear = list_box.clone();
+    clear_btn.connect_clicked(move |_| {
+        st_clear.clear_history().ok();
+        while let Some(child) = list_box_clear.first_child() {
+            list_box_clear.remove(&child);
+        }
+    });
+
+    let scroll = ScrolledWindow::builder()
+        .hscrollbar_policy(gtk4::PolicyType::Never)
+        .child(&container)
+        .build();
+
+    scroll.upcast()
+}
+
+/// Constrói a página interna "bear://downloads".
+pub fn build_downloads_view(storage_mgr: Arc<StorageManager>) -> gtk4::Widget {
+    let container = GtkBox::new(Orientation::Vertical, 16);
+    container.set_margin_top(24);
+    container.set_margin_bottom(24);
+    container.set_margin_start(32);
+    container.set_margin_end(32);
+
+    let header_box = GtkBox::new(Orientation::Horizontal, 16);
+    let title = Label::builder()
+        .label(&t!("downloads.title"))
+        .css_classes(["title-1", "heading"])
+        .hexpand(true)
+        .halign(Align::Start)
+        .build();
+
+    let clear_btn = Button::builder()
+        .label(&t!("downloads.clear_all"))
+        .css_classes(["flat", "pill"])
+        .build();
+
+    header_box.append(&title);
+    header_box.append(&clear_btn);
+    container.append(&header_box);
+
+    let list_box = ListBox::builder()
+        .selection_mode(SelectionMode::None)
+        .css_classes(["boxed-list"])
+        .build();
+
+    let downloads = storage_mgr.list_downloads(50).unwrap_or_default();
+
+    if downloads.is_empty() {
+        let empty_label = Label::builder()
+            .label(&t!("downloads.empty"))
+            .css_classes(["dim-label"])
+            .margin_top(32)
+            .build();
+        container.append(&empty_label);
+    } else {
+        for dl in downloads {
+            let row = ActionRow::builder()
+                .title(&dl.filename)
+                .subtitle(&format!(
+                    "{} • {} ({:.0}%)",
+                    dl.url,
+                    bear_storage::DownloadItem::format_size(dl.downloaded_bytes),
+                    dl.progress_percent()
+                ))
+                .activatable(false)
+                .build();
+
+            let actions_box = GtkBox::new(Orientation::Horizontal, 8);
+            let path_clone = dl.target_path.clone();
+
+            if dl.state == bear_storage::DownloadState::Completed {
+                let open_btn = Button::builder()
+                    .label(&t!("downloads.open_file"))
+                    .css_classes(["flat"])
+                    .build();
+
+                let p_file = path_clone.clone();
+                open_btn.connect_clicked(move |_| {
+                    let uri = format!("file://{}", p_file);
+                    gio::AppInfo::launch_default_for_uri(&uri, None::<&gio::AppLaunchContext>).ok();
+                });
+                actions_box.append(&open_btn);
+            }
+
+            let folder_btn = Button::builder()
+                .icon_name("folder-symbolic")
+                .tooltip_text(&t!("downloads.open_folder"))
+                .css_classes(["flat"])
+                .build();
+
+            let p_folder = path_clone;
+            folder_btn.connect_clicked(move |_| {
+                if let Some(parent) = std::path::Path::new(&p_folder).parent() {
+                    let uri = format!("file://{}", parent.display());
+                    gio::AppInfo::launch_default_for_uri(&uri, None::<&gio::AppLaunchContext>).ok();
+                }
+            });
+            actions_box.append(&folder_btn);
+
+            row.add_suffix(&actions_box);
             list_box.append(&row);
         }
         container.append(&list_box);
@@ -291,8 +417,89 @@ pub fn build_history_view<F: Fn(&str) + 'static>(
 
     let st_clear = storage_mgr.clone();
     clear_btn.connect_clicked(move |_| {
-        st_clear.clear_history().ok();
+        st_clear.clear_completed_downloads().ok();
     });
+
+    let scroll = ScrolledWindow::builder()
+        .hscrollbar_policy(gtk4::PolicyType::Never)
+        .child(&container)
+        .build();
+
+    scroll.upcast()
+}
+
+/// Constrói a página interna "bear://bookmarks".
+pub fn build_bookmarks_view<F: Fn(&str) + 'static>(
+    storage_mgr: Arc<StorageManager>,
+    on_navigate: F,
+) -> gtk4::Widget {
+    let container = GtkBox::new(Orientation::Vertical, 16);
+    container.set_margin_top(24);
+    container.set_margin_bottom(24);
+    container.set_margin_start(32);
+    container.set_margin_end(32);
+
+    let on_nav_rc = Rc::new(on_navigate);
+
+    let header_box = GtkBox::new(Orientation::Horizontal, 16);
+    let title = Label::builder()
+        .label(&t!("common.bookmarks"))
+        .css_classes(["title-1", "heading"])
+        .hexpand(true)
+        .halign(Align::Start)
+        .build();
+
+    header_box.append(&title);
+    container.append(&header_box);
+
+    let list_box = ListBox::builder()
+        .selection_mode(SelectionMode::None)
+        .css_classes(["boxed-list"])
+        .build();
+
+    let bookmarks = storage_mgr.list_bookmarks().unwrap_or_default();
+
+    if bookmarks.is_empty() {
+        let empty_label = Label::builder()
+            .label("Nenhum favorito salvo ainda. Pressione Ctrl+D para salvar a página atual.")
+            .css_classes(["dim-label"])
+            .margin_top(32)
+            .build();
+        container.append(&empty_label);
+    } else {
+        for bm in bookmarks {
+            let row = ActionRow::builder()
+                .title(&bm.title)
+                .subtitle(&bm.url)
+                .activatable(true)
+                .build();
+
+            let target_url = bm.url.clone();
+            let nav_cb = on_nav_rc.clone();
+            row.connect_activated(move |_| {
+                nav_cb(&target_url);
+            });
+
+            let del_btn = Button::builder()
+                .icon_name("user-trash-symbolic")
+                .tooltip_text("Excluir favorito")
+                .css_classes(["flat", "circular"])
+                .build();
+
+            let st_del = storage_mgr.clone();
+            let bmid = bm.id;
+            let row_clone = row.clone();
+            let list_box_clone = list_box.clone();
+            del_btn.connect_clicked(move |_| {
+                st_del.delete_bookmark(bmid).ok();
+                list_box_clone.remove(&row_clone);
+            });
+
+            row.add_suffix(&del_btn);
+            list_box.append(&row);
+        }
+        container.append(&list_box);
+    }
 
     let scroll = ScrolledWindow::builder()
         .hscrollbar_policy(gtk4::PolicyType::Never)

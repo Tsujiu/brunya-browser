@@ -68,6 +68,71 @@ impl PermissionState {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DownloadState {
+    InProgress,
+    Paused,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+impl DownloadState {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            DownloadState::InProgress => "in_progress",
+            DownloadState::Paused => "paused",
+            DownloadState::Completed => "completed",
+            DownloadState::Failed => "failed",
+            DownloadState::Cancelled => "cancelled",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "paused" => DownloadState::Paused,
+            "completed" => DownloadState::Completed,
+            "failed" => DownloadState::Failed,
+            "cancelled" => DownloadState::Cancelled,
+            _ => DownloadState::InProgress,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DownloadItem {
+    pub id: i64,
+    pub url: String,
+    pub filename: String,
+    pub target_path: String,
+    pub total_bytes: i64,
+    pub downloaded_bytes: i64,
+    pub state: DownloadState,
+    pub created_at: DateTime<Utc>,
+}
+
+impl DownloadItem {
+    pub fn format_size(bytes: i64) -> String {
+        if bytes < 1024 {
+            format!("{} B", bytes)
+        } else if bytes < 1024 * 1024 {
+            format!("{:.1} KB", bytes as f64 / 1024.0)
+        } else if bytes < 1024 * 1024 * 1024 {
+            format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
+        } else {
+            format!("{:.2} GB", bytes as f64 / (1024.0 * 1024.0 * 1024.0))
+        }
+    }
+
+    pub fn progress_percent(&self) -> f64 {
+        if self.total_bytes <= 0 {
+            0.0
+        } else {
+            ((self.downloaded_bytes as f64 / self.total_bytes as f64) * 100.0).clamp(0.0, 100.0)
+        }
+    }
+}
+
 pub struct StorageManager {
     conn: Mutex<Connection>,
 }
@@ -149,6 +214,26 @@ impl StorageManager {
                 );
 
                 INSERT INTO schema_migrations (version) VALUES (1);
+                COMMIT;",
+            )?;
+        }
+
+        if current_version < 2 {
+            info!("Aplicando migração v2 do banco de dados BEAR (tabela de downloads)...");
+            conn.execute_batch(
+                "BEGIN;
+                CREATE TABLE IF NOT EXISTS downloads (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT NOT NULL,
+                    filename TEXT NOT NULL,
+                    target_path TEXT NOT NULL,
+                    total_bytes INTEGER NOT NULL,
+                    downloaded_bytes INTEGER NOT NULL,
+                    state TEXT NOT NULL,
+                    created_at INTEGER NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_downloads_created ON downloads(created_at DESC);
+                INSERT INTO schema_migrations (version) VALUES (2);
                 COMMIT;",
             )?;
         }
@@ -252,6 +337,75 @@ impl StorageManager {
         Ok(rows > 0)
     }
 
+    // --- Downloads ---
+
+    pub fn add_download(
+        &self,
+        url: &str,
+        filename: &str,
+        target_path: &str,
+        total_bytes: i64,
+    ) -> Result<i64> {
+        let conn = self.conn.lock();
+        let now_ts = Utc::now().timestamp();
+        conn.execute(
+            "INSERT INTO downloads (url, filename, target_path, total_bytes, downloaded_bytes, state, created_at)
+             VALUES (?1, ?2, ?3, ?4, 0, ?5, ?6)",
+            params![url, filename, target_path, total_bytes, DownloadState::InProgress.as_str(), now_ts],
+        )?;
+        Ok(conn.last_insert_rowid())
+    }
+
+    pub fn update_download_progress(&self, id: i64, downloaded: i64, state: DownloadState) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            "UPDATE downloads SET downloaded_bytes = ?1, state = ?2 WHERE id = ?3",
+            params![downloaded, state.as_str(), id],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_downloads(&self, limit: usize) -> Result<Vec<DownloadItem>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn.prepare(
+            "SELECT id, url, filename, target_path, total_bytes, downloaded_bytes, state, created_at
+             FROM downloads
+             ORDER BY created_at DESC, id DESC
+             LIMIT ?1",
+        )?;
+
+        let rows = stmt.query_map(params![limit as i64], |row| {
+            let state_str: String = row.get(6)?;
+            let ts: i64 = row.get(7)?;
+            let dt = DateTime::from_timestamp(ts, 0).unwrap_or_else(Utc::now);
+            Ok(DownloadItem {
+                id: row.get(0)?,
+                url: row.get(1)?,
+                filename: row.get(2)?,
+                target_path: row.get(3)?,
+                total_bytes: row.get(4)?,
+                downloaded_bytes: row.get(5)?,
+                state: DownloadState::from_str(&state_str),
+                created_at: dt,
+            })
+        })?;
+
+        let mut items = Vec::new();
+        for r in rows {
+            items.push(r?);
+        }
+        Ok(items)
+    }
+
+    pub fn clear_completed_downloads(&self) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            "DELETE FROM downloads WHERE state IN ('completed', 'cancelled', 'failed')",
+            [],
+        )?;
+        Ok(())
+    }
+
     // --- Permissões por Site ---
 
     pub fn set_site_permission(&self, origin: &str, permission: &str, state: PermissionState) -> Result<()> {
@@ -311,6 +465,23 @@ mod tests {
 
         assert!(db.delete_bookmark(bm_id).unwrap());
         assert_eq!(db.list_bookmarks().unwrap().len(), 0);
+
+        // Downloads
+        let dl_id = db.add_download(
+            "https://kernel.org/linux-6.12.tar.xz",
+            "linux-6.12.tar.xz",
+            "/home/user/Downloads/linux-6.12.tar.xz",
+            145000000,
+        ).unwrap();
+
+        db.update_download_progress(dl_id, 145000000, DownloadState::Completed).unwrap();
+        let downloads = db.list_downloads(10).unwrap();
+        assert_eq!(downloads.len(), 1);
+        assert_eq!(downloads[0].state, DownloadState::Completed);
+        assert_eq!(downloads[0].progress_percent(), 100.0);
+
+        db.clear_completed_downloads().unwrap();
+        assert_eq!(db.list_downloads(10).unwrap().len(), 0);
 
         // Permissões
         db.set_site_permission("https://meet.jit.si", "camera", PermissionState::Allow).unwrap();

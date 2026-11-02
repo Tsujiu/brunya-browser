@@ -139,6 +139,16 @@ impl TabManager {
         }
     }
 
+    pub fn toggle_pin_tab(&self, tab_id: TabId) -> bool {
+        let mut tabs = self.tabs.write();
+        if let Some(tab) = tabs.iter_mut().find(|t| t.id == tab_id) {
+            tab.is_pinned = !tab.is_pinned;
+            tab.is_pinned
+        } else {
+            false
+        }
+    }
+
     /// Executa a política inteligente de suspensão de abas inativas para economia de memória RAM.
     /// Retorna os IDs das abas que foram suspensas nesta rodada.
     pub fn suspend_inactive_tabs(&self, idle_timeout: Duration) -> Vec<TabId> {

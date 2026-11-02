@@ -1,0 +1,16 @@
+{
+  "title": "Downloads",
+  "empty": "No recent downloads",
+  "clear_all": "Clear Completed",
+  "status_in_progress": "Downloading: {percent}% ({downloaded} of {total})",
+  "status_completed": "Completed • {size}",
+  "status_paused": "Paused",
+  "status_failed": "Download failed",
+  "status_cancelled": "Cancelled",
+  "open_file": "Open File",
+  "open_folder": "Show in Folder",
+  "pause": "Pause",
+  "resume": "Resume",
+  "cancel": "Cancel",
+  "retry": "Retry"
+}

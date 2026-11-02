@@ -1,0 +1,16 @@
+{
+  "title": "Downloads",
+  "empty": "Nenhum download recente",
+  "clear_all": "Limpar Concluídos",
+  "status_in_progress": "Baixando: {percent}% ({downloaded} de {total})",
+  "status_completed": "Concluído • {size}",
+  "status_paused": "Pausado",
+  "status_failed": "Falha no download",
+  "status_cancelled": "Cancelado",
+  "open_file": "Abrir Arquivo",
+  "open_folder": "Abrir Pasta",
+  "pause": "Pausar",
+  "resume": "Retomar",
+  "cancel": "Cancelar",
+  "retry": "Tentar Novamente"
+}

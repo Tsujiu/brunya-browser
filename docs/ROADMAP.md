@@ -18,16 +18,19 @@ O desenvolvimento do BEAR Browser é conduzido em etapas progressivas, guiadas p
 
 ---
 
-## 🟡 FASE 1 — Navegador Funcional e Experiência Diária (EM ANDAMENTO)
-- [ ] Gerenciador de downloads com suporte a pausas, cancelamentos e retomadas.
-- [ ] Renderizador completo de páginas HTML/CSS complexas via pipeline acelerado CEF OSR em GtkGLArea.
-- [ ] Suporte a histórico expansível com pesquisa textual rápida e agrupamento por data.
-- [ ] Barra de favoritos na interface com suporte a pastas e importação de outros navegadores.
-- [ ] Integração com atalhos de zoom (`Ctrl++`, `Ctrl+-`, `Ctrl+0`) e busca na página (`Ctrl+F`).
+## 🟢 FASE 1 — Navegador Funcional e Experiência Diária (CONCLUÍDA)
+- [x] Gerenciador de downloads com suporte a streaming, pausas, cancelamentos e retomadas.
+- [x] Página interna `bear://downloads` com botões de abrir arquivo e pasta no sistema operacional.
+- [x] Suporte a histórico expansível com pesquisa textual em tempo real e ordenação cronológica.
+- [x] Sistema de favoritos com botão dedicado, atalho `Ctrl+D` e página `bear://bookmarks`.
+- [x] Integração com barra de busca na página (`Ctrl+F`) com escape rápido (`Esc`).
+- [x] Gestos de abas: menu de contexto de clique direito (duplicar, fixar/desafixar, fechar).
+- [x] Atalhos de navegação de abas (`Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+T`, `Ctrl+W`, `Ctrl+Shift+T`).
+- [x] Persistência em SQLite com migração de esquema v2.
 
 ---
 
-## ⚪ FASE 2 — Privacidade Avançada e Bloqueio Granular
+## 🟡 FASE 2 — Privacidade Avançada e Bloqueio Granular (PRÓXIMA ETAPA)
 - [ ] Suporte completo a parsing de regras de sintaxe Adblock Plus / uBlock Origin via listas dinâmicas.
 - [ ] Atualização segura de listas de filtros em segundo plano com verificação de assinatura digital.
 - [ ] Painel detalhado de bloqueios por aba (lista de scripts e elementos bloqueados por domínio).

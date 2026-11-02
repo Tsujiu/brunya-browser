@@ -156,6 +156,20 @@ impl WebView {
                     },
                 ))
             }
+            "bear://downloads" => {
+                ("Downloads", crate::ui::internal_views::build_downloads_view(
+                    self.storage.clone(),
+                ))
+            }
+            "bear://bookmarks" => {
+                let self_clone = self.clone();
+                ("Favoritos", crate::ui::internal_views::build_bookmarks_view(
+                    self.storage.clone(),
+                    move |target| {
+                        self_clone.load_url(target);
+                    },
+                ))
+            }
             "bear://about" => ("Sobre o BEAR", crate::ui::internal_views::build_about_view()),
             _ => ("Página Não Encontrada", crate::ui::internal_views::build_about_view()),
         };

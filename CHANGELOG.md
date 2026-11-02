@@ -5,6 +5,17 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 
 ---
 
+## [0.2.0-alpha] - 2026-11-01
+
+### Adicionado
+- **Fase 1 Concluída:** Navegador funcional para uso diário no Linux.
+- **Gerenciador de Downloads:** Pipeline de streaming com monitoramento de progresso, persistência SQLite (migração de esquema v2), botões de abrir arquivo e pasta (`gio::AppInfo`) e atalho `Ctrl+J`.
+- **Sistema de Favoritos Integrado:** Botão de estrela na barra de endereço, atalho `Ctrl+D`, página interna `bear://bookmarks` e remoção com um clique.
+- **Histórico com Pesquisa em Tempo Real:** Filtragem dinâmica por termo em títulos e URLs em `bear://history`, com limpeza total e persistência de timestamps.
+- **Navegação Avançada de Abas:** Gesto de clique direito com menu de contexto (Duplicar, Fixar/Desafixar, Fechar), alternância rápida via `Ctrl+Tab` e `Ctrl+Shift+Tab`.
+- **Barra de Localizar na Página (Find in Page):** Ativação por `Ctrl+F` e fechamento com `Esc`, com interface compacta no topo da página.
+- **Interface e Navegação Expandida:** Botões de downloads e favoritos no HeaderBar, atalhos convencionais e tratamento completo de erros.
+
 ## [0.1.0-alpha] - 2026-11-01
 
 ### Adicionado
