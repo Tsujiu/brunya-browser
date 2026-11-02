@@ -1,0 +1,41 @@
+[package]
+name = "brunya-linux"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Navegador Brunya Browser para Linux (Mint, Ubuntu, Debian)"
+
+[dependencies]
+brunya-core.workspace = true
+brunya-i18n.workspace = true
+brunya-storage.workspace = true
+brunya-adblock.workspace = true
+brunya-privacy.workspace = true
+brunya-tabs.workspace = true
+brunya-settings.workspace = true
+brunya-diagnostics.workspace = true
+
+gtk4.workspace = true
+libadwaita.workspace = true
+glib.workspace = true
+gio.workspace = true
+gdk4.workspace = true
+cairo-rs.workspace = true
+
+cef = { workspace = true, optional = true }
+cef-dll-sys = { workspace = true, optional = true }
+
+serde.workspace = true
+serde_json.workspace = true
+url.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+parking_lot.workspace = true
+thiserror.workspace = true
+ureq.workspace = true
+
+[features]
+default = []
+cef-engine = ["dep:cef", "dep:cef-dll-sys"]

@@ -1,0 +1,18 @@
+[package]
+name = "brunya-settings"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Estrutura de configurações persistentes do Brunya Browser"
+
+[dependencies]
+brunya-adblock.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+parking_lot.workspace = true
+
+[dev-dependencies]
+tempfile = "3.17"

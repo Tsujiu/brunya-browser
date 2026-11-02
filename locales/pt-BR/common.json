@@ -1,5 +1,5 @@
 {
-  "app_name": "BEAR Browser",
+  "app_name": "Brunya Browser",
   "app_tagline": "Rápido por engenharia, leve por arquitetura, privado por padrão.",
   "new_tab": "Nova Aba",
   "close_tab": "Fechar Aba",
@@ -23,6 +23,6 @@
   "find_in_page": "Localizar na Página",
   "dev_tools": "Ferramentas do Desenvolvedor",
   "private_window": "Nova Janela Privada",
-  "about": "Sobre o BEAR",
+  "about": "Sobre o Brunya",
   "quit": "Sair"
 }

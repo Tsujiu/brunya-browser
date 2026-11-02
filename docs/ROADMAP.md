@@ -1,13 +1,13 @@
-# Roteiro de Desenvolvimento (Roadmap) — BEAR Browser
+# Roteiro de Desenvolvimento (Roadmap) — Brunya Browser
 
-O desenvolvimento do BEAR Browser é conduzido em etapas progressivas, guiadas por critérios objetivos de aceitação e comprovação de métricas.
+O desenvolvimento do Brunya Browser é conduzido em etapas progressivas, guiadas por critérios objetivos de aceitação e comprovação de métricas.
 
 ---
 
 ## 🟢 FASE 0 — Auditoria, Arquitetura e Prova de Conceito (CONCLUÍDA)
 - [x] Inspecionar o ambiente de desenvolvimento (Linux Mint 22 / Ubuntu 24.04 x86-64).
 - [x] Elaborar o relatório técnico comparativo e o ADR-0001 (CEF vs Content API vs GTK4).
-- [x] Estruturar o repositório modular e o workspace Cargo (`apps/bear-linux` + 8 crates).
+- [x] Estruturar o repositório modular e o workspace Cargo (`apps/brunya-linux` + 8 crates).
 - [x] Implementar a janela nativa GTK4/libadwaita com controles de navegação e abas.
 - [x] Implementar navegação real na web (carregamento ao vivo de `https://kernel.org`).
 - [x] Integrar motor de internacionalização com paridade de catálogos pt-BR e en.
@@ -20,9 +20,9 @@ O desenvolvimento do BEAR Browser é conduzido em etapas progressivas, guiadas p
 
 ## 🟢 FASE 1 — Navegador Funcional e Experiência Diária (CONCLUÍDA)
 - [x] Gerenciador de downloads com suporte a streaming, pausas, cancelamentos e retomadas.
-- [x] Página interna `bear://downloads` com botões de abrir arquivo e pasta no sistema operacional.
+- [x] Página interna `brunya://downloads` com botões de abrir arquivo e pasta no sistema operacional.
 - [x] Suporte a histórico expansível com pesquisa textual em tempo real e ordenação cronológica.
-- [x] Sistema de favoritos com botão dedicado, atalho `Ctrl+D` e página `bear://bookmarks`.
+- [x] Sistema de favoritos com botão dedicado, atalho `Ctrl+D` e página `brunya://bookmarks`.
 - [x] Integração com barra de busca na página (`Ctrl+F`) com escape rápido (`Esc`).
 - [x] Gestos de abas: menu de contexto de clique direito (duplicar, fixar/desafixar, fechar).
 - [x] Atalhos de navegação de abas (`Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+T`, `Ctrl+W`, `Ctrl+Shift+T`).
@@ -37,7 +37,7 @@ O desenvolvimento do BEAR Browser é conduzido em etapas progressivas, guiadas p
 - [x] Modos de proteção: Balanceado (padrão) e Rigoroso (máxima proteção).
 - [x] Diálogo de permissões de site por origem (câmera, microfone, localização, notificações) integrado ao cadeado de segurança.
 - [x] Configurações de DNS Seguro (DNS-over-HTTPS / DoH) com provedores Quad9 e Cloudflare.
-- [x] Janela de navegação privada (`bear://private`) com garantia de não persistência de histórico ou dados em disco.
+- [x] Janela de navegação privada (`brunya://private`) com garantia de não persistência de histórico ou dados em disco.
 
 ---
 

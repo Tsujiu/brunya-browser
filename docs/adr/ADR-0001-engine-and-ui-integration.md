@@ -2,14 +2,14 @@
 
 - **Status:** Aprovado (Accepted)
 - **Data:** 2026-11-01
-- **Autores:** Equipe de Engenharia do BEAR Browser
+- **Autores:** Equipe de Engenharia do Brunya Browser
 - **Contexto:** Definição da base tecnológica do motor de renderização web e integração com interface gráfica nativa em Linux (GTK4 + libadwaita).
 
 ---
 
 ## 1. Contexto e Problema
 
-O **BEAR Browser** tem como objetivo central fornecer **MÁXIMA VELOCIDADE + BAIXO CONSUMO DE MEMÓRIA** em distribuições Linux (prioritariamente Linux Mint e Ubuntu x86-64), com foco intransigente em privacidade, segurança e uma interface limpa, elegante e moderna baseada no ecossistema GNOME/libadwaita.
+O **Brunya Browser** tem como objetivo central fornecer **MÁXIMA VELOCIDADE + BAIXO CONSUMO DE MEMÓRIA** em distribuições Linux (prioritariamente Linux Mint e Ubuntu x86-64), com foco intransigente em privacidade, segurança e uma interface limpa, elegante e moderna baseada no ecossistema GNOME/libadwaita.
 
 O motor de renderização precisa garantir:
 1. Compatibilidade universal com a web moderna (HTML5, ECMAScript moderno, CSS Grid/Flexbox, WebAssembly, WebRTC, DRM/Media, WebSockets).
@@ -63,14 +63,14 @@ O motor de renderização precisa garantir:
 
 Adotamos a **Alternativa 1: CEF (Chromium Embedded Framework) com Renderização Off-Screen (OSR) e Abstração Modular em Rust**.
 
-1. **Camada de Abstração do Motor (`bear-core` / `BrowserEngine` trait):**
-   A arquitetura do BEAR isola a interface gráfica e os módulos de negócio de qualquer tipo concreto do CEF através de traits em Rust (`BrowserEngine`, `BrowserTab`, `NavigationController`, `NetworkFilter`). Isso garante que a UI e os sistemas de abas, histórico, favoritos e bloqueio de anúncios permaneçam desacoplados e testáveis unitariamente.
+1. **Camada de Abstração do Motor (`brunya-core` / `BrowserEngine` trait):**
+   A arquitetura do Brunya isola a interface gráfica e os módulos de negócio de qualquer tipo concreto do CEF através de traits em Rust (`BrowserEngine`, `BrowserTab`, `NavigationController`, `NetworkFilter`). Isso garante que a UI e os sistemas de abas, histórico, favoritos e bloqueio de anúncios permaneçam desacoplados e testáveis unitariamente.
 2. **Integração Gráfica OSR com GTK4:**
    O renderizador do CEF opera em modo OSR, notificando callbacks de pintura em threads dedicadas. Os buffers de pixels são convertidos eficientemente em texturas de exibição GTK4 (`GdkMemoryTexture` / Cairo surface / GL Texture), garantindo suporte universal para **Wayland e X11**.
 3. **Loop de Eventos Integrado:**
    O loop de eventos do GTK (GLib MainContext) coordena o despacho de trabalho do CEF através de `cef::do_message_loop_work` agendado a intervalos controlados (ou via thread dedicada do CEF `multi_threaded_message_loop = false/true`), evitando bloqueio da UI e mantendo o consumo de CPU em repouso próximo de 0%.
 4. **Isolamento de Processos e Sandbox:**
-   Subprocessos auxiliares (`bear-linux --type=renderer`, `--type=gpu-process`, etc.) são delegados ao pipeline seguro do Chromium, mantendo a proteção seccomp e namespaces ativa.
+   Subprocessos auxiliares (`brunya-linux --type=renderer`, `--type=gpu-process`, etc.) são delegados ao pipeline seguro do Chromium, mantendo a proteção seccomp e namespaces ativa.
 
 ---
 

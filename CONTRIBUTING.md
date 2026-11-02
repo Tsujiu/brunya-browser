@@ -1,6 +1,6 @@
-# Guia de Contribuição — BEAR Browser
+# Guia de Contribuição — Brunya Browser
 
-Agradecemos o seu interesse em contribuir com o BEAR Browser! Este é um projeto de código aberto focado em construir um navegador web rápido, leve e privado.
+Agradecemos o seu interesse em contribuir com o Brunya Browser! Este é um projeto de código aberto focado em construir um navegador web rápido, leve e privado.
 
 ---
 
@@ -9,7 +9,7 @@ Agradecemos o seu interesse em contribuir com o BEAR Browser! Este é um projeto
 Antes de submeter código, certifique-se de seguir as diretrizes do projeto:
 1. **Sem Funcionalidades Fictícias:** Toda funcionalidade implementada deve possuir comportamento real, tratamento de erros e testes.
 2. **Segurança Primeiro:** Desempenho nunca deve comprometer proteções fundamentais de segurança ou sandbox.
-3. **Internacionalização:** Nenhum texto da interface pode ser fixo (hardcoded) no código Rust. Use sempre o sistema de tradução `bear-i18n` com chaves em pt-BR e en.
+3. **Internacionalização:** Nenhum texto da interface pode ser fixo (hardcoded) no código Rust. Use sempre o sistema de tradução `brunya-i18n` com chaves em pt-BR e en.
 4. **Respeito à Memória:** Evite trabalho redundante na thread principal da interface. Use tipos eficientes e concorrência limpa.
 
 ---
