@@ -13,7 +13,10 @@ pub struct BrowserHeader {
     pub address_entry: Entry,
     pub bookmark_btn: Button,
     pub shield_btn: Button,
+    pub shield_icon: Image,
     pub shield_label: Label,
+    pub shield_white_tex: Option<gdk4::Texture>,
+    pub shield_black_tex: Option<gdk4::Texture>,
     pub theme_toggle_btn: Button,
     pub downloads_btn: Button,
     pub new_tab_btn: Button,
@@ -74,7 +77,13 @@ impl BrowserHeader {
             .css_classes(["flat"])
             .build();
 
-        // Botão Oficial do Escudo de Privacidade com ícone brunya-shield.svg
+        // Carregar as duas versões do escudo oficial: branco para modo escuro, preto para modo claro
+        let white_bytes = glib::Bytes::from_static(include_bytes!("../../../../assets/icons/brunya-shield-white.svg"));
+        let shield_white_tex = gdk4::Texture::from_bytes(&white_bytes).ok();
+
+        let black_bytes = glib::Bytes::from_static(include_bytes!("../../../../assets/icons/brunya-shield.svg"));
+        let shield_black_tex = gdk4::Texture::from_bytes(&black_bytes).ok();
+
         let shield_btn = Button::builder()
             .css_classes(["flat"])
             .tooltip_text(&t!("privacy.shield_title"))
@@ -82,9 +91,14 @@ impl BrowserHeader {
 
         let shield_content = GtkBox::new(Orientation::Horizontal, 4);
 
-        let shield_svg_bytes = glib::Bytes::from_static(include_bytes!("../../../../assets/icons/brunya-shield.svg"));
-        let shield_paintable = gdk4::Texture::from_bytes(&shield_svg_bytes).ok();
-        let shield_icon = if let Some(ref tex) = shield_paintable {
+        let initial_dark = libadwaita::StyleManager::default().is_dark();
+        let initial_tex = if initial_dark {
+            shield_white_tex.as_ref()
+        } else {
+            shield_black_tex.as_ref()
+        };
+
+        let shield_icon = if let Some(tex) = initial_tex {
             let img = Image::from_paintable(Some(tex));
             img.set_pixel_size(20);
             img
@@ -116,9 +130,9 @@ impl BrowserHeader {
             .build();
 
         let theme_toggle_btn = Button::builder()
-            .icon_name("display-brightness-symbolic")
-            .tooltip_text("Alternar modo claro / escuro")
-            .css_classes(["flat"])
+            .icon_name(if initial_dark { "display-brightness-symbolic" } else { "weather-clear-night-symbolic" })
+            .tooltip_text(if initial_dark { "Mudar para tema claro" } else { "Mudar para tema escuro" })
+            .css_classes(["flat", "circular"])
             .build();
 
         let new_tab_btn = Button::builder()
@@ -146,11 +160,30 @@ impl BrowserHeader {
             address_entry,
             bookmark_btn,
             shield_btn,
+            shield_icon,
             shield_label,
+            shield_white_tex,
+            shield_black_tex,
             theme_toggle_btn,
             downloads_btn,
             new_tab_btn,
             menu_btn,
+        }
+    }
+
+    pub fn update_theme_icons(&self, is_dark: bool) {
+        if is_dark {
+            if let Some(ref tex) = self.shield_white_tex {
+                self.shield_icon.set_paintable(Some(tex));
+            }
+            self.theme_toggle_btn.set_icon_name("display-brightness-symbolic");
+            self.theme_toggle_btn.set_tooltip_text(Some("Mudar para tema claro"));
+        } else {
+            if let Some(ref tex) = self.shield_black_tex {
+                self.shield_icon.set_paintable(Some(tex));
+            }
+            self.theme_toggle_btn.set_icon_name("weather-clear-night-symbolic");
+            self.theme_toggle_btn.set_tooltip_text(Some("Mudar para tema escuro"));
         }
     }
 
