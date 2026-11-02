@@ -26,6 +26,7 @@ pub struct TabDescriptor {
     pub is_pinned: bool,
     pub is_playing_audio: bool,
     pub is_suspended: bool,
+    pub memory_usage_mb: u64,
     pub created_at: DateTime<Utc>,
     pub last_active_at: DateTime<Utc>,
 }
@@ -41,6 +42,7 @@ impl TabDescriptor {
             is_pinned: false,
             is_playing_audio: false,
             is_suspended: false,
+            memory_usage_mb: 18,
             created_at: now,
             last_active_at: now,
         }
@@ -138,7 +140,7 @@ impl TabManager {
         Some(restored)
     }
 
-    pub fn update_tab_metadata(&self, tab_id: TabId, url: &str, title: &str, favicon: Option<String>) {
+    pub fn update_tab_metadata(&self, tab_id: TabId, url: &str, title: &str, favicon: Option<String>, memory_mb: u64) {
         let mut tabs = self.tabs.write();
         if let Some(tab) = tabs.iter_mut().find(|t| t.id == tab_id) {
             tab.url = url.to_string();
@@ -147,6 +149,9 @@ impl TabManager {
             }
             if favicon.is_some() {
                 tab.favicon_url = favicon;
+            }
+            if memory_mb > 0 {
+                tab.memory_usage_mb = memory_mb;
             }
         }
     }

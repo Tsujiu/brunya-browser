@@ -195,9 +195,23 @@ impl BrunyaWindow {
         let active_id = self.tab_manager.active_tab().map(|t| t.id);
 
         let views = self.tab_views.borrow();
+        let total_tabs = tabs.len();
+
         let favicons: HashMap<TabId, Option<gdk4::Texture>> = views
             .iter()
             .map(|(tid, v)| (*tid, v.current_favicon.borrow().clone()))
+            .collect();
+
+        let ram_usages: HashMap<TabId, u64> = tabs
+            .iter()
+            .map(|tab| {
+                let ram = if let Some(view) = views.get(&tab.id) {
+                    view.calculate_ram_mb(&tab.url, total_tabs)
+                } else {
+                    tab.memory_usage_mb
+                };
+                (tab.id, ram)
+            })
             .collect();
 
         let this_sw = self.clone();
@@ -225,13 +239,20 @@ impl BrunyaWindow {
 
         self.tab_bar
             .borrow_mut()
-            .render_tabs(&tabs, active_id, &favicons, on_switch, on_close, on_dup, on_pin);
+            .render_tabs(&tabs, active_id, &favicons, &ram_usages, on_switch, on_close, on_dup, on_pin);
     }
 
     fn on_active_tab_state_changed(self: &Rc<Self>, tab_id: TabId, state: &brunya_core::types::NavigationState) {
+        let total_tabs = self.tab_manager.list_tabs().len();
+        let ram_mb = if let Some(view) = self.tab_views.borrow().get(&tab_id) {
+            view.calculate_ram_mb(&state.url, total_tabs)
+        } else {
+            18
+        };
+
         // Atualizar metadados no gerenciador de abas
         self.tab_manager
-            .update_tab_metadata(tab_id, &state.url, &state.title, state.favicon_url.clone());
+            .update_tab_metadata(tab_id, &state.url, &state.title, state.favicon_url.clone(), ram_mb);
 
         // Se a aba notificada for a aba atualmente ativa, atualiza a UI
         if let Some(active) = self.tab_manager.active_tab() {
