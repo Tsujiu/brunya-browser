@@ -99,8 +99,10 @@ name = "bear-adblock"
 version = "0.1.0"
 dependencies = [
  "bear-core",
+ "chrono",
  "parking_lot",
  "regex",
+ "ring",
  "serde",
  "serde_json",
  "thiserror",

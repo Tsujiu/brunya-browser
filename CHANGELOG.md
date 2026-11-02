@@ -5,6 +5,18 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 
 ---
 
+## [0.3.0-alpha] - 2026-11-01
+
+### Adicionado
+- **Fase 2 Concluída:** Privacidade e Bloqueio Avançado.
+- **Motor Adblock com Parsing Sintático ABP:** Suporte completo a âncoras de domínio (`||`), âncoras de início/fim (`|`), regras de exceção (`@@`), regras cosméticas (`##`), tipos de recursos (`$script`, `$image`) e restrições de terceiros (`$third-party`).
+- **Atualização Atômica de Listas de Filtros:** Módulo `FilterListManager` com verificação de integridade criptográfica SHA-256 (`ring::digest`) e suporte a rollback seguro (`.bak`).
+- **Estatísticas Granulares de Privacidade:** Categorização automática de ameaças (Publicidade, Analítico/Telemetria, Widgets Sociais, Fingerprinting e Mineração) com visualização por aba.
+- **Painel do Escudo de Privacidade Aprimorado:** Seletor de Modo Balanceado vs Modo Rigoroso e listagem dos domínios bloqueados na aba ativa.
+- **Diálogo de Permissões por Site:** Ancorado ao botão de segurança da barra de URL, permitindo alternar permissões de Câmera, Microfone, Localização e Notificações por origem.
+- **Configurações de DNS Seguro (DoH):** Suporte a DNS-over-HTTPS com provedor Quad9 padrão (sem logs) e Cloudflare.
+- **Modo Privado Completo:** Janelas privadas isoladas sem persistência em disco de histórico/cookies e página explicativa dos limites de privacidade (`bear://private`).
+
 ## [0.2.0-alpha] - 2026-11-01
 
 ### Adicionado

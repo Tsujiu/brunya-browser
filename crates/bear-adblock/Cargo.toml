@@ -15,5 +15,7 @@ tracing.workspace = true
 parking_lot.workspace = true
 url.workspace = true
 regex.workspace = true
+chrono.workspace = true
+ring = "0.17"
 
 [dev-dependencies]

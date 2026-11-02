@@ -221,7 +221,53 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
         s_mgr_ck.update(|s| s.block_third_party_cookies = val).ok();
     });
 
+    // Do Not Track
+    let dnt_row = SwitchRow::builder()
+        .title("Não rastrear (Do Not Track)")
+        .subtitle("Envia cabeçalho 'DNT: 1' para todos os sites solicitando não rastreamento")
+        .active(settings_mgr.get().do_not_track)
+        .build();
+
+    let s_mgr_dnt = settings_mgr.clone();
+    dnt_row.connect_active_notify(move |sw| {
+        let val = sw.is_active();
+        s_mgr_dnt.update(|s| s.do_not_track = val).ok();
+    });
+
+    // DNS Seguro (DoH)
+    let dns_row = ActionRow::builder()
+        .title("DNS Seguro (DNS-over-HTTPS)")
+        .subtitle("Criptografa consultas de domínio protegendo contra espionagem do provedor local")
+        .build();
+
+    let dns_box = GtkBox::new(Orientation::Horizontal, 6);
+    let quad9_btn = Button::builder().label("Quad9 (Privacidade)").css_classes(["pill"]).build();
+    let cf_btn = Button::builder().label("Cloudflare").css_classes(["pill"]).build();
+    let sys_dns_btn = Button::builder().label("Sistema").css_classes(["pill"]).build();
+
+    let s_mgr_q9 = settings_mgr.clone();
+    quad9_btn.connect_clicked(move |_| {
+        s_mgr_q9.update(|s| s.secure_dns_mode = bear_settings::SecureDnsMode::Quad9).ok();
+    });
+
+    let s_mgr_cf = settings_mgr.clone();
+    cf_btn.connect_clicked(move |_| {
+        s_mgr_cf.update(|s| s.secure_dns_mode = bear_settings::SecureDnsMode::Cloudflare).ok();
+    });
+
+    let s_mgr_sys = settings_mgr.clone();
+    sys_dns_btn.connect_clicked(move |_| {
+        s_mgr_sys.update(|s| s.secure_dns_mode = bear_settings::SecureDnsMode::System).ok();
+    });
+
+    dns_box.append(&quad9_btn);
+    dns_box.append(&cf_btn);
+    dns_box.append(&sys_dns_btn);
+    dns_row.add_suffix(&dns_box);
+
     priv_group.add(&cookie_row);
+    priv_group.add(&dnt_row);
+    priv_group.add(&dns_row);
     page.add(&priv_group);
 
     page.upcast()

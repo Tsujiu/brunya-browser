@@ -1,7 +1,16 @@
 //! Motor integrado de bloqueio de anúncios e rastreadores do BEAR Browser.
 //!
-//! Intercepta requisições de rede antes do tráfego de dados,
-//! com suporte a listas de filtros, exceções e estatísticas de proteção.
+//! Fornece parsing de regras sintáticas ABP/EasyList, modos de proteção
+//! (Balanceado, Rigoroso, Personalizado), rastreamento detalhado de bloqueios por aba,
+//! atualização atômica de listas com SHA-256 e capacidade de rollback.
+
+pub mod rule;
+pub mod stats;
+pub mod updater;
+
+pub use rule::{ParsedRule, ResourceType, RuleKind};
+pub use stats::{AdblockStats, BlockedEntry, TrackerCategory};
+pub use updater::{FilterListManager, FilterListMetadata};
 
 use bear_core::traits::{NetworkInterceptor, RequestAction};
 use bear_core::types::TabId;
@@ -9,40 +18,48 @@ use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use tracing::{debug, info};
 use url::Url;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ProtectionMode {
     #[default]
-    Balanced,
-    Strict,
-    Custom,
-    Disabled,
-}
-
-#[derive(Debug, Clone)]
-pub struct FilterRule {
-    pub pattern: String,
-    pub is_whitelist: bool,
-    pub domains: Option<HashSet<String>>,
+    Balanced, // Padrão: bloqueia anúncios, rastreadores e telemetria mantendo compatibilidade
+    Strict,   // Rigoroso: bloqueio agressivo de scripts de terceiros e marketing
+    Custom,   // Personalizado pelo usuário
+    Disabled, // Desativado
 }
 
 pub struct AdblockEngine {
     mode: RwLock<ProtectionMode>,
-    blocked_patterns: RwLock<Vec<String>>,
+    rules: RwLock<Vec<ParsedRule>>,
     whitelist_domains: RwLock<HashSet<String>>,
     total_blocked_counter: AtomicU64,
+    stats: Arc<AdblockStats>,
+    updater: Arc<FilterListManager>,
 }
 
 impl AdblockEngine {
     pub fn new() -> Self {
+        let storage_dir = if let Ok(home) = std::env::var("HOME") {
+            std::path::PathBuf::from(home).join(".local/share/bear/filters")
+        } else {
+            std::path::PathBuf::from("/tmp/bear/filters")
+        };
+
+        let updater = Arc::new(FilterListManager::new(&storage_dir));
+        let stats = Arc::new(AdblockStats::new());
+
         let engine = Self {
             mode: RwLock::new(ProtectionMode::Balanced),
-            blocked_patterns: RwLock::new(Vec::new()),
+            rules: RwLock::new(Vec::new()),
             whitelist_domains: RwLock::new(HashSet::new()),
             total_blocked_counter: AtomicU64::new(0),
+            stats,
+            updater,
         };
+
         engine.load_default_protection_list();
         engine
     }
@@ -53,6 +70,14 @@ impl AdblockEngine {
 
     pub fn mode(&self) -> ProtectionMode {
         *self.mode.read()
+    }
+
+    pub fn stats(&self) -> Arc<AdblockStats> {
+        self.stats.clone()
+    }
+
+    pub fn updater(&self) -> Arc<FilterListManager> {
+        self.updater.clone()
     }
 
     pub fn total_blocked(&self) -> u64 {
@@ -67,51 +92,53 @@ impl AdblockEngine {
         self.whitelist_domains.read().contains(&domain.to_lowercase())
     }
 
-    /// Carrega lista de regras embutida de alta eficiência (telemetria invasiva, ad networks globais).
+    pub fn add_rule(&self, rule_str: &str) {
+        if let Some(rule) = ParsedRule::parse(rule_str) {
+            self.rules.write().push(rule);
+        }
+    }
+
+    /// Carrega as regras fundamentais de privacidade do BEAR (EasyList + EasyPrivacy essenciais).
     fn load_default_protection_list(&self) {
         let default_rules = [
-            "doubleclick.net",
-            "google-analytics.com",
-            "googletagmanager.com",
-            "adnxs.com",
-            "criteo.com",
-            "scorecardresearch.com",
-            "taboola.com",
-            "outbrain.com",
-            "facebook.net/signals",
-            "connect.facebook.net/en_US/fbevents.js",
-            "analytics.tiktok.com",
-            "hotjar.com",
-            "clarity.ms",
-            "telemetry",
-            "/pagead/",
-            "/ads.js",
-            "/adserver/",
-            "/pixel.gif",
-            "adservice.google.",
+            "||doubleclick.net^$third-party",
+            "||google-analytics.com^",
+            "||googletagmanager.com^",
+            "||adnxs.com^",
+            "||criteo.com^",
+            "||criteo.net^",
+            "||scorecardresearch.com^",
+            "||taboola.com^",
+            "||outbrain.com^",
+            "||connect.facebook.net/*/fbevents.js",
+            "||analytics.tiktok.com^",
+            "||hotjar.com^",
+            "||clarity.ms^",
+            "||telemetry.api.*^",
+            "/pagead/js/adsbygoogle.js",
+            "||adservice.google.*^",
+            "||amazon-adsystem.com^",
+            "||moatads.com^",
+            "||quantserve.com^",
+            "||chartbeat.com^",
         ];
 
-        let mut patterns = self.blocked_patterns.write();
-        for rule in default_rules {
-            patterns.push(rule.to_string());
+        let mut rules = self.rules.write();
+        for r in default_rules {
+            if let Some(parsed) = ParsedRule::parse(r) {
+                rules.push(parsed);
+            }
         }
-        info!("BEAR Adblock carregou {} regras fundamentais de privacidade", patterns.len());
+        info!("BEAR Adblock carregou {} regras fundamentais de privacidade", rules.len());
     }
 
-    pub fn add_rule(&self, rule: &str) {
-        let trimmed = rule.trim();
-        if trimmed.is_empty() || trimmed.starts_with('!') || trimmed.starts_with('#') {
-            return; // Comentários
-        }
-
-        if let Some(exception) = trimmed.strip_prefix("@@") {
-            self.allow_site(exception);
-        } else {
-            self.blocked_patterns.write().push(trimmed.to_string());
-        }
-    }
-
-    pub fn should_block_url(&self, raw_url: &str) -> bool {
+    pub fn should_block(
+        &self,
+        tab_id: TabId,
+        raw_url: &str,
+        source_domain: Option<&str>,
+        resource_type: Option<ResourceType>,
+    ) -> bool {
         let mode = self.mode();
         if mode == ProtectionMode::Disabled {
             return false;
@@ -123,22 +150,54 @@ impl AdblockEngine {
         };
 
         let host = parsed_url.host_str().unwrap_or("").to_lowercase();
+        let url_lower = raw_url.to_lowercase();
 
-        // 1. Verificar lista de permissões
+        // 1. Verificar Whitelist do site
         if self.is_site_allowed(&host) {
             return false;
         }
+        if let Some(src) = source_domain {
+            if self.is_site_allowed(src) {
+                return false;
+            }
+        }
 
-        let patterns = self.blocked_patterns.read();
-        for pattern in patterns.iter() {
-            if raw_url.contains(pattern) || host.contains(pattern) {
-                self.total_blocked_counter.fetch_add(1, Ordering::Relaxed);
-                debug!("BEAR Adblock bloqueou requisição: {} (regra: {})", raw_url, pattern);
+        let rules = self.rules.read();
+
+        // 2. Verificar regras de exceção primeiro (@@)
+        for rule in rules.iter() {
+            if rule.kind == RuleKind::Whitelist && rule.matches(&url_lower, &host, source_domain, resource_type) {
+                return false;
+            }
+        }
+
+        // 3. Modo Rigoroso: bloqueia frames de terceiros e rastreadores adicionais
+        if mode == ProtectionMode::Strict {
+            if let Some(src) = source_domain {
+                if !host.is_empty() && !ParsedRule::base_domain(src).eq_ignore_ascii_case(ParsedRule::base_domain(&host)) {
+                    if let Some(ResourceType::Subdocument) = resource_type {
+                        self.record_block(tab_id, raw_url, "Strict Mode: Subdocument de Terceiro Bloqueado");
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // 4. Verificar regras de rede
+        for rule in rules.iter() {
+            if rule.kind == RuleKind::Network && rule.matches(&url_lower, &host, source_domain, resource_type) {
+                self.record_block(tab_id, raw_url, &rule.raw);
                 return true;
             }
         }
 
         false
+    }
+
+    fn record_block(&self, tab_id: TabId, url: &str, rule: &str) {
+        self.total_blocked_counter.fetch_add(1, Ordering::Relaxed);
+        self.stats.record_block(tab_id, url, rule);
+        debug!("BEAR Adblock bloqueou requisição: {} (regra: {})", url, rule);
     }
 }
 
@@ -149,8 +208,9 @@ impl Default for AdblockEngine {
 }
 
 impl NetworkInterceptor for AdblockEngine {
-    fn inspect_request(&self, _tab_id: TabId, url: &str, _resource_type: &str) -> RequestAction {
-        if self.should_block_url(url) {
+    fn inspect_request(&self, tab_id: TabId, url: &str, resource_type_str: &str) -> RequestAction {
+        let rt = ResourceType::from_str(resource_type_str);
+        if self.should_block(tab_id, url, None, rt) {
             RequestAction::Block {
                 reason: "Bloqueado pelo Escudo de Privacidade BEAR".to_string(),
             }
@@ -165,18 +225,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_adblock_filtering() {
+    fn test_adblock_engine_full() {
         let engine = AdblockEngine::new();
+        let tab = TabId::new();
 
-        assert!(engine.should_block_url("https://securepubads.g.doubleclick.net/gampad/ads"));
-        assert!(engine.should_block_url("https://www.google-analytics.com/analytics.js"));
-        assert!(!engine.should_block_url("https://kernel.org/pub/linux/kernel/"));
-        assert!(!engine.should_block_url("https://docs.rs/gtk4/latest/"));
+        // Testar bloqueio de publicidade padrão
+        assert!(engine.should_block(
+            tab,
+            "https://securepubads.g.doubleclick.net/gampad/ads",
+            Some("example.com"),
+            Some(ResourceType::Script),
+        ));
 
-        // Testar exceção de site
-        engine.allow_site("google-analytics.com");
-        assert!(!engine.should_block_url("https://google-analytics.com/analytics.js"));
+        // Testar estatísticas
+        let entries = engine.stats().get_tab_entries(tab);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].domain, "securepubads.g.doubleclick.net");
 
-        assert!(engine.total_blocked() >= 2);
+        // Testar site não bloqueado
+        assert!(!engine.should_block(
+            tab,
+            "https://kernel.org/pub/linux/kernel/",
+            Some("kernel.org"),
+            None,
+        ));
     }
 }

@@ -91,6 +91,7 @@ impl BearApp {
                     this_act.adblock_engine.clone(),
                     this_act.storage_manager.clone(),
                     this_act.settings_manager.clone(),
+                    false,
                 );
 
                 if !this_act.initial_urls.is_empty() {
@@ -124,6 +125,24 @@ impl BearApp {
             }
         });
         self.app.add_action(&action_new_tab);
+
+        // Ação: Nova Janela Privada
+        let action_priv = SimpleAction::new("new_private_window", None);
+        let w_priv = win_weak.clone();
+        action_priv.connect_activate(move |_, _| {
+            if let Some(app) = w_priv.upgrade() {
+                let priv_win = BearWindow::new(
+                    &app.app,
+                    Arc::new(TabManager::new()),
+                    app.adblock_engine.clone(),
+                    app.storage_manager.clone(),
+                    app.settings_manager.clone(),
+                    true,
+                );
+                priv_win.present();
+            }
+        });
+        self.app.add_action(&action_priv);
 
         // Ação: Histórico
         let action_hist = SimpleAction::new("open_history", None);

@@ -2,6 +2,7 @@ use crate::engine::WebView;
 use crate::ui::find_bar::FindBar;
 use crate::ui::header::BrowserHeader;
 use crate::ui::privacy_popover::PrivacyShieldPopover;
+use crate::ui::site_permissions_popover::SitePermissionsPopover;
 use crate::ui::tab_bar::BrowserTabBar;
 use bear_adblock::AdblockEngine;
 use bear_core::types::{TabId, UrlHelper};
@@ -20,6 +21,7 @@ use std::sync::Arc;
 
 pub struct BearWindow {
     pub window: ApplicationWindow,
+    pub is_private: bool,
     header: Rc<BrowserHeader>,
     tab_bar: Rc<RefCell<BrowserTabBar>>,
     find_bar: Rc<FindBar>,
@@ -38,6 +40,7 @@ impl BearWindow {
         adblock_engine: Arc<AdblockEngine>,
         storage_manager: Arc<StorageManager>,
         settings_manager: Arc<SettingsManager>,
+        is_private: bool,
     ) -> Rc<Self> {
         let root_box = GtkBox::new(Orientation::Vertical, 0);
 
@@ -59,16 +62,27 @@ impl BearWindow {
         tab_stack.set_hexpand(true);
         root_box.append(&tab_stack);
 
+        let initial_title = if is_private {
+            format!("{} (Navegação Privada)", t!("common.app_name"))
+        } else {
+            t!("common.app_name")
+        };
+
         let window = ApplicationWindow::builder()
             .application(app)
-            .title(&t!("common.app_name"))
+            .title(&initial_title)
             .default_width(1200)
             .default_height(800)
             .content(&root_box)
             .build();
 
+        if is_private {
+            window.add_css_class("devel"); // Estilo visual diferenciado do Libadwaita para janelas especiais
+        }
+
         let bear_window = Rc::new(Self {
             window,
+            is_private,
             header,
             tab_bar,
             find_bar,
@@ -84,7 +98,9 @@ impl BearWindow {
         bear_window.setup_shortcuts();
 
         // Abrir primeira aba
-        bear_window.open_new_tab("bear://newtab", &t!("common.new_tab"));
+        let start_url = if is_private { "bear://private" } else { "bear://newtab" };
+        let start_title = if is_private { "Janela Privada" } else { &t!("common.new_tab") };
+        bear_window.open_new_tab(start_url, start_title);
 
         bear_window
     }
@@ -118,6 +134,7 @@ impl BearWindow {
             self.adblock_engine.clone(),
             self.storage_manager.clone(),
             self.settings_manager.clone(),
+            self.is_private,
             on_state_changed,
         );
 
@@ -311,6 +328,23 @@ impl BearWindow {
             }
         });
 
+        // 3.1. Botão de Segurança (Abre Diálogo de Permissões e Conexão)
+        let this_sec = self.clone();
+        self.header.security_btn.connect_clicked(move |btn| {
+            let active = this_sec.tab_manager.active_tab();
+            let url = active.as_ref().map(|t| t.url.as_str()).unwrap_or("bear://newtab");
+            let is_secure = url.starts_with("https://") || url.starts_with("bear://");
+            let origin = if let Ok(parsed) = url::Url::parse(url) {
+                format!("{}://{}", parsed.scheme(), parsed.host_str().unwrap_or(""))
+            } else {
+                url.to_string()
+            };
+
+            let popover = SitePermissionsPopover::new(this_sec.storage_manager.clone(), origin, is_secure);
+            popover.popover.set_parent(btn);
+            popover.popover.popup();
+        });
+
         // 4. Botão Recarregar
         let this_rel = self.clone();
         self.header.reload_btn.connect_clicked(move |_| {
@@ -342,12 +376,14 @@ impl BearWindow {
         // 8. Botão Escudo de Privacidade
         let this_shield = self.clone();
         self.header.shield_btn.connect_clicked(move |btn| {
-            let current_site = this_shield
-                .tab_manager
-                .active_tab()
-                .map(|t| t.url)
+            let active = this_shield.tab_manager.active_tab();
+            let current_site = active
+                .as_ref()
+                .map(|t| t.url.clone())
                 .unwrap_or_default();
-            let popover = PrivacyShieldPopover::new(this_shield.adblock_engine.clone(), current_site);
+            let tid = active.as_ref().map(|t| t.id).unwrap_or_default();
+
+            let popover = PrivacyShieldPopover::new(this_shield.adblock_engine.clone(), tid, current_site);
             popover.popover.set_parent(btn);
             popover.popover.popup();
         });
@@ -355,6 +391,7 @@ impl BearWindow {
         // 9. Menu Principal
         let menu_model = gio::Menu::new();
         menu_model.append(Some(&t!("common.new_tab")), Some("app.new_tab"));
+        menu_model.append(Some(&t!("common.private_window")), Some("app.new_private_window"));
         menu_model.append(Some(&t!("common.duplicate_tab")), Some("app.duplicate_tab"));
         menu_model.append(Some(&t!("common.bookmarks")), Some("app.open_bookmarks"));
         menu_model.append(Some(&t!("common.history")), Some("app.open_history"));
