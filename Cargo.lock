@@ -173,6 +173,7 @@ dependencies = [
  "gtk4",
  "libadwaita",
  "parking_lot",
+ "regex",
  "serde",
  "serde_json",
  "thiserror",
