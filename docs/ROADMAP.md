@@ -51,15 +51,17 @@ O desenvolvimento do Brunya Browser é conduzido em etapas progressivas, guiadas
 
 ---
 
-## 🟡 FASE 4 — Distribuição e Empacotamento (PRÓXIMA ETAPA)
-- [ ] Construção do pacote `.deb` para instalação nativa no Linux Mint e Ubuntu.
-- [ ] Configuração de repositório APT assinado com GPG para atualizações automáticas via `apt upgrade`.
-- [ ] Validação de builds reprodutíveis e geração automática de Software Bill of Materials (SBOM).
-- [ ] Pipeline de CI/CD no GitHub Actions com auditoria de vulnerabilidades (`cargo audit`, `cargo deny`).
+## 🟢 FASE 4 — Distribuição e Empacotamento (CONCLUÍDA)
+- [x] Construção do pacote `.deb` reproduzível com binário stripped e metadados Debian completos.
+- [x] Configuração e geração de repositório APT assinado com GPG (`InRelease` e `Release.gpg`).
+- [x] Motor de atualização criptográfica `brunya-updater` com proteção anti-rollback e anti-freeze.
+- [x] Geração automatizada de Software Bill of Materials (SBOM) no padrão CycloneDX 1.5 JSON.
+- [x] Workflows de CI/CD automatizados no GitHub Actions para testes, linting, packaging e releases.
+- [x] Guias oficiais de instalação (`docs/INSTALL.md`) e release (`docs/RELEASE.md`).
 
 ---
 
-## ⚪ FASE 5 — Versão Beta Pública
+## 🟡 FASE 5 — Versão Beta Pública (PRÓXIMA ETAPA)
 - [ ] Testes de compatibilidade em larga escala com os 500 sites mais acessados.
 - [ ] Auditoria externa de segurança e revisão completa de licenças de terceiros.
 - [ ] Abertura do portal de suporte e sistema público de reporte de bugs.

@@ -237,6 +237,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "brunya-updater"
+version = "0.3.0"
+dependencies = [
+ "brunya-core",
+ "chrono",
+ "parking_lot",
+ "ring",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tracing",
+ "ureq",
+ "url",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

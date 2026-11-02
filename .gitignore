@@ -6,3 +6,4 @@
 *.db
 *.db-journal
 /docs/screenshots/
+/dist/

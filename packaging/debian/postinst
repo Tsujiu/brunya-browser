@@ -1,0 +1,22 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+    # Registrar como alternativa de navegador padrão do sistema
+    update-alternatives --install /usr/bin/x-www-browser x-www-browser /usr/bin/brunya-browser 150 \
+        --slave /usr/share/man/man1/x-www-browser.1.gz x-www-browser.1.gz /usr/share/man/man1/brunya-browser.1.gz || true
+
+    update-alternatives --install /usr/bin/gnome-www-browser gnome-www-browser /usr/bin/brunya-browser 150 || true
+
+    # Atualizar cache de tipos MIME e desktop
+    if which update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database -q /usr/share/applications || true
+    fi
+
+    # Atualizar cache de ícones
+    if which gtk-update-icon-cache >/dev/null 2>&1; then
+        gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
+    fi
+fi
+
+exit 0

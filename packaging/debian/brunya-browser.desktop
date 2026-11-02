@@ -1,0 +1,26 @@
+[Desktop Entry]
+Version=1.0
+Name=Brunya Browser
+GenericName=Web Browser
+GenericName[pt_BR]=Navegador Web
+Comment=Navegador web rápido, leve e privado para Linux
+Comment[pt_BR]=Navegador web rápido, leve e privado para Linux
+Exec=brunya-browser %U
+Icon=brunya-browser
+Terminal=false
+Type=Application
+Categories=Network;WebBrowser;GTK;
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/brunya;
+StartupNotify=true
+StartupWMClass=org.brunyabrowser.Brunya
+Actions=new-window;new-private-window;
+
+[Desktop Action new-window]
+Name=Nova Janela
+Name[pt_BR]=Nova Janela
+Exec=brunya-browser
+
+[Desktop Action new-private-window]
+Name=Nova Janela Privada
+Name[pt_BR]=Nova Janela Privada
+Exec=brunya-browser --private-window
