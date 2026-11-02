@@ -20,10 +20,12 @@ impl BrowserTabBar {
         tab_box.set_margin_end(4);
         tab_box.set_margin_top(2);
         tab_box.set_margin_bottom(2);
+        tab_box.set_hexpand(true);
 
         let container = ScrolledWindow::builder()
             .vscrollbar_policy(gtk4::PolicyType::Never)
             .hscrollbar_policy(gtk4::PolicyType::Automatic)
+            .hexpand(true)
             .child(&tab_box)
             .css_classes(["tab-bar"])
             .build();
@@ -39,6 +41,7 @@ impl BrowserTabBar {
         &mut self,
         tabs: &[TabDescriptor],
         active_id: Option<TabId>,
+        favicons: &HashMap<TabId, Option<gdk4::Texture>>,
         on_switch: FSwitch,
         on_close: FClose,
         on_duplicate: FDup,
@@ -55,12 +58,29 @@ impl BrowserTabBar {
         }
         self.tab_widgets.clear();
 
+        let num_tabs = tabs.len();
+        // Largura responsiva e dinâmica: quanto mais abas, menores elas ficam
+        let target_width = if num_tabs <= 1 {
+            240
+        } else if num_tabs <= 3 {
+            190
+        } else if num_tabs <= 5 {
+            145
+        } else if num_tabs <= 8 {
+            105
+        } else if num_tabs <= 12 {
+            75
+        } else {
+            48
+        };
+
         for tab in tabs {
             let is_active = Some(tab.id) == active_id;
 
             let tab_pill = GtkBox::new(Orientation::Horizontal, 4);
             tab_pill.set_valign(Align::Center);
-            tab_pill.set_width_request(180);
+            tab_pill.set_hexpand(true);
+            tab_pill.set_width_request(target_width);
             tab_pill.add_css_class("tab-pill");
             if is_active {
                 tab_pill.add_css_class("active");
@@ -69,30 +89,45 @@ impl BrowserTabBar {
                 tab_pill.add_css_class("suspended");
             }
 
-            // Ícone da aba
-            let icon_name = if tab.is_pinned {
-                "view-pin-symbolic"
+            // Ícone da aba: puxa o favicon real do site caso disponível
+            let icon: Image = if let Some(Some(tex)) = favicons.get(&tab.id) {
+                let img = Image::from_paintable(Some(tex));
+                img.set_pixel_size(16);
+                img
+            } else if tab.is_pinned {
+                let img = Image::from_icon_name("view-pin-symbolic");
+                img.set_pixel_size(16);
+                img
             } else if tab.is_suspended {
-                "system-run-symbolic" // Indicador de suspensão de memória
+                let img = Image::from_icon_name("system-run-symbolic");
+                img.set_pixel_size(16);
+                img
             } else if tab.url.starts_with("brunya://") {
-                "security-high-symbolic"
+                let img = Image::from_icon_name("web-browser-symbolic");
+                img.set_pixel_size(16);
+                img
             } else {
-                "text-html-symbolic"
+                let img = Image::from_icon_name("text-html-symbolic");
+                img.set_pixel_size(16);
+                img
             };
 
-            let icon = Image::from_icon_name(icon_name);
             let display_title = if tab.title.is_empty() {
                 "Nova Aba"
             } else {
                 &tab.title
             };
 
+            let show_label = target_width >= 70;
+            let max_chars = if target_width >= 180 { 18 } else if target_width >= 120 { 11 } else { 6 };
+
             let label = Label::builder()
                 .label(display_title)
-                .max_width_chars(18)
+                .max_width_chars(max_chars)
                 .ellipsize(gtk4::pango::EllipsizeMode::End)
                 .hexpand(true)
                 .halign(Align::Start)
+                .visible(show_label)
                 .build();
 
             // Botão de Seleção da Aba (Ícone + Título com hexpand para empurrar o X para o final)

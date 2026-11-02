@@ -194,6 +194,12 @@ impl BrunyaWindow {
         let tabs = self.tab_manager.list_tabs();
         let active_id = self.tab_manager.active_tab().map(|t| t.id);
 
+        let views = self.tab_views.borrow();
+        let favicons: HashMap<TabId, Option<gdk4::Texture>> = views
+            .iter()
+            .map(|(tid, v)| (*tid, v.current_favicon.borrow().clone()))
+            .collect();
+
         let this_sw = self.clone();
         let on_switch = move |tid: TabId| {
             this_sw.switch_to_tab(tid);
@@ -219,7 +225,7 @@ impl BrunyaWindow {
 
         self.tab_bar
             .borrow_mut()
-            .render_tabs(&tabs, active_id, on_switch, on_close, on_dup, on_pin);
+            .render_tabs(&tabs, active_id, &favicons, on_switch, on_close, on_dup, on_pin);
     }
 
     fn on_active_tab_state_changed(self: &Rc<Self>, tab_id: TabId, state: &brunya_core::types::NavigationState) {
