@@ -55,34 +55,45 @@ impl WebView {
         internal_area.set_hexpand(true);
         container.append(&internal_area);
 
-        // Criar WebView do WebKit 6.0 com isolamento de sessão para modo privado
-        let webkit_view = if is_private {
-            let session = NetworkSession::new_ephemeral();
-            WebKitWebView::builder()
-                .network_session(&session)
-                .vexpand(true)
-                .hexpand(true)
-                .build()
+        // Configurar sessão de rede com banco SQLite persistente para cookies e dados
+        let home = std::env::var("HOME").unwrap_or_default();
+        let data_dir = format!("{}/.local/share/brunya/data", home);
+        let cache_dir = format!("{}/.cache/brunya/cache", home);
+        std::fs::create_dir_all(&data_dir).ok();
+        std::fs::create_dir_all(&cache_dir).ok();
+
+        let session = if is_private {
+            NetworkSession::new_ephemeral()
         } else {
-            WebKitWebView::builder()
-                .vexpand(true)
-                .hexpand(true)
-                .build()
+            let s = NetworkSession::new(Some(&data_dir), Some(&cache_dir));
+            if let Some(cm) = s.cookie_manager() {
+                let cookie_db = format!("{}/cookies.sqlite", data_dir);
+                cm.set_persistent_storage(&cookie_db, webkit6::CookiePersistentStorage::Sqlite);
+                cm.set_accept_policy(webkit6::CookieAcceptPolicy::Always);
+            }
+            s
         };
+
+        let webkit_view = WebKitWebView::builder()
+            .network_session(&session)
+            .vexpand(true)
+            .hexpand(true)
+            .build();
+
         // Configurar cor de fundo escura nativa no WebKit para evitar tela branca ao carregar
         let dark_bg = gdk4::RGBA::new(0.06, 0.07, 0.09, 1.0);
         webkit_view.set_background_color(&dark_bg);
         webkit_view.set_visible(false);
         container.append(&webkit_view);
 
-        // Configurar WebKit Settings com User-Agent padrão e aceleração
+        // Configurar WebKit Settings com User-Agent neutro que não requer Client Hints do Chrome
         if let Some(wk_settings) = webkit6::prelude::WebViewExt::settings(&webkit_view) {
             wk_settings.set_enable_developer_extras(true);
             wk_settings.set_enable_page_cache(true);
             wk_settings.set_javascript_can_access_clipboard(true);
             wk_settings.set_enable_smooth_scrolling(true);
             wk_settings.set_user_agent(Some(
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0",
             ));
         }
 
