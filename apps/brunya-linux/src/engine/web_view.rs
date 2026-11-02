@@ -5,42 +5,26 @@ use brunya_i18n::t;
 use brunya_settings::SettingsManager;
 use brunya_storage::StorageManager;
 use gtk4::prelude::*;
-use gtk4::{
-    Align, Box as GtkBox, Button, Label, Orientation, ProgressBar, ScrolledWindow,
-    TextBuffer, TextTagTable, TextView,
-};
+use gtk4::{Align, Box as GtkBox, Button, Label, Orientation, ProgressBar};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tracing::{error, info, warn};
-
-enum NetworkResponse {
-    Success {
-        url: String,
-        title: String,
-        body: String,
-        status: i32,
-        sec_level: SecurityLevel,
-    },
-    Error {
-        url: String,
-        message: String,
-    },
-}
+use tracing::{info, warn};
+use webkit6::prelude::*;
+use webkit6::{LoadEvent, NetworkSession, WebView as WebKitWebView};
 
 pub struct WebView {
     pub container: GtkBox,
     pub tab_id: TabId,
-    content_area: GtkBox,
+    internal_area: GtkBox,
+    pub webkit_view: WebKitWebView,
     progress_bar: ProgressBar,
     current_state: RefCell<NavigationState>,
-    history_stack: RefCell<Vec<String>>,
-    history_index: RefCell<usize>,
     adblock: Arc<AdblockEngine>,
     storage: Arc<StorageManager>,
     settings: Arc<SettingsManager>,
-    is_private: bool,
+    _is_private: bool,
     is_loading: AtomicBool,
     on_state_changed: Rc<dyn Fn(&NavigationState)>,
 }
@@ -64,10 +48,38 @@ impl WebView {
             .build();
         container.append(&progress_bar);
 
-        let content_area = GtkBox::new(Orientation::Vertical, 0);
-        content_area.set_vexpand(true);
-        content_area.set_hexpand(true);
-        container.append(&content_area);
+        let internal_area = GtkBox::new(Orientation::Vertical, 0);
+        internal_area.set_vexpand(true);
+        internal_area.set_hexpand(true);
+        container.append(&internal_area);
+
+        // Criar WebView do WebKit 6.0 com isolamento de sessão para modo privado
+        let webkit_view = if is_private {
+            let session = NetworkSession::new_ephemeral();
+            WebKitWebView::builder()
+                .network_session(&session)
+                .vexpand(true)
+                .hexpand(true)
+                .build()
+        } else {
+            WebKitWebView::builder()
+                .vexpand(true)
+                .hexpand(true)
+                .build()
+        };
+        webkit_view.set_visible(false);
+        container.append(&webkit_view);
+
+        // Configurar WebKit Settings
+        if let Some(wk_settings) = webkit6::prelude::WebViewExt::settings(&webkit_view) {
+            wk_settings.set_enable_developer_extras(true);
+            wk_settings.set_enable_page_cache(true);
+            wk_settings.set_javascript_can_access_clipboard(true);
+            wk_settings.set_enable_smooth_scrolling(true);
+            wk_settings.set_user_agent(Some(
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36 Brunya/0.3.0",
+            ));
+        }
 
         let default_start = if is_private { "brunya://private" } else { "brunya://newtab" };
         let default_title = if is_private { "Janela Privada" } else { "Nova Aba" };
@@ -83,17 +95,116 @@ impl WebView {
         let view = Rc::new(Self {
             container,
             tab_id,
-            content_area,
-            progress_bar,
+            internal_area,
+            webkit_view: webkit_view.clone(),
+            progress_bar: progress_bar.clone(),
             current_state: RefCell::new(initial_state),
-            history_stack: RefCell::new(vec![default_start.to_string()]),
-            history_index: RefCell::new(0),
-            adblock,
-            storage,
+            adblock: adblock.clone(),
+            storage: storage.clone(),
             settings,
-            is_private,
+            _is_private: is_private,
             is_loading: AtomicBool::new(false),
             on_state_changed,
+        });
+
+        // 1. Notificação de URI
+        let this_uri = Rc::downgrade(&view);
+        let storage_uri = storage.clone();
+        let is_priv = is_private;
+        webkit_view.connect_uri_notify(move |v| {
+            if let Some(uri) = v.uri() {
+                if let Some(this) = this_uri.upgrade() {
+                    let mut state = this.current_state.borrow_mut();
+                    state.url = uri.to_string();
+                    let is_https = uri.starts_with("https://");
+                    state.security_level = if is_https {
+                        SecurityLevel::Secure
+                    } else {
+                        SecurityLevel::Insecure
+                    };
+                    state.can_go_back = v.can_go_back();
+                    state.can_go_forward = v.can_go_forward();
+                    (this.on_state_changed)(&state);
+
+                    if !is_priv && !uri.starts_with("brunya://") {
+                        storage_uri.record_history_visit(&uri, &state.title).ok();
+                    }
+                }
+            }
+        });
+
+        // 2. Notificação de Título
+        let this_title = Rc::downgrade(&view);
+        webkit_view.connect_title_notify(move |v| {
+            if let Some(t) = v.title() {
+                if let Some(this) = this_title.upgrade() {
+                    let mut state = this.current_state.borrow_mut();
+                    state.title = t.to_string();
+                    (this.on_state_changed)(&state);
+                }
+            }
+        });
+
+        // 3. Progresso estimado
+        let pb_progress = progress_bar.clone();
+        let this_progress = Rc::downgrade(&view);
+        webkit_view.connect_estimated_load_progress_notify(move |v| {
+            let p = v.estimated_load_progress();
+            pb_progress.set_fraction(p);
+            if let Some(this) = this_progress.upgrade() {
+                let mut state = this.current_state.borrow_mut();
+                state.progress = p;
+                (this.on_state_changed)(&state);
+            }
+        });
+
+        // 4. Mudança de carregamento
+        let pb_load = progress_bar.clone();
+        let this_load = Rc::downgrade(&view);
+        webkit_view.connect_load_changed(move |v, event| {
+            match event {
+                LoadEvent::Started => {
+                    pb_load.set_visible(true);
+                    if let Some(this) = this_load.upgrade() {
+                        this.is_loading.store(true, Ordering::SeqCst);
+                        let mut state = this.current_state.borrow_mut();
+                        state.is_loading = true;
+                        state.can_go_back = v.can_go_back();
+                        state.can_go_forward = v.can_go_forward();
+                        (this.on_state_changed)(&state);
+                    }
+                }
+                LoadEvent::Finished => {
+                    pb_load.set_visible(false);
+                    if let Some(this) = this_load.upgrade() {
+                        this.is_loading.store(false, Ordering::SeqCst);
+                        let mut state = this.current_state.borrow_mut();
+                        state.is_loading = false;
+                        state.can_go_back = v.can_go_back();
+                        state.can_go_forward = v.can_go_forward();
+                        (this.on_state_changed)(&state);
+                    }
+                }
+                _ => {}
+            }
+        });
+
+        // 5. Interceptador de Adblock na política de navegação
+        let ab_policy = adblock.clone();
+        webkit_view.connect_decide_policy(move |_v, decision, decision_type| {
+            if decision_type == webkit6::PolicyDecisionType::NavigationAction {
+                if let Some(nav_decision) = decision.downcast_ref::<webkit6::NavigationPolicyDecision>() {
+                    if let Some(req) = nav_decision.navigation_action().and_then(|a| a.request()) {
+                        if let Some(uri) = req.uri() {
+                            if ab_policy.should_block(tab_id, uri.as_str(), None, None) {
+                                decision.ignore();
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            false
         });
 
         // Carregar página inicial
@@ -117,27 +228,20 @@ impl WebView {
             return;
         }
 
-        // 2. Atualizar histórico interno de navegação (Back/Forward)
-        {
-            let mut stack = self.history_stack.borrow_mut();
-            let mut idx = self.history_index.borrow_mut();
-            if *idx < stack.len() && stack[*idx] != clean_url {
-                stack.truncate(*idx + 1);
-                stack.push(clean_url.clone());
-                *idx = stack.len() - 1;
-            }
-        }
-
-        // 3. Renderizar páginas internas ou carregar da Web
+        // 2. Alternar entre Páginas Internas nativas do Brunya e Web Real
         if clean_url.starts_with("brunya://") {
+            self.webkit_view.set_visible(false);
+            self.internal_area.set_visible(true);
             self.render_internal_page(&clean_url);
         } else {
-            self.fetch_and_render_web_page(&clean_url);
+            self.internal_area.set_visible(false);
+            self.webkit_view.set_visible(true);
+            self.webkit_view.load_uri(&clean_url);
         }
     }
 
     fn render_internal_page(self: &Rc<Self>, url: &str) {
-        self.clear_content();
+        self.clear_internal_area();
 
         let (title, widget) = match url {
             "brunya://newtab" => {
@@ -188,7 +292,7 @@ impl WebView {
 
         widget.set_vexpand(true);
         widget.set_hexpand(true);
-        self.content_area.append(&widget);
+        self.internal_area.append(&widget);
 
         // Atualizar estado
         let mut state = self.current_state.borrow_mut();
@@ -197,305 +301,15 @@ impl WebView {
         state.security_level = SecurityLevel::Internal;
         state.is_loading = false;
         state.progress = 1.0;
-        self.update_can_go(&mut state);
-        (self.on_state_changed)(&state);
-    }
-
-    fn fetch_and_render_web_page(self: &Rc<Self>, url: &str) {
-        self.is_loading.store(true, Ordering::SeqCst);
-        self.progress_bar.set_visible(true);
-        self.progress_bar.set_fraction(0.3);
-
-        let is_https = url.starts_with("https://");
-        let sec_level = if is_https {
-            SecurityLevel::Secure
-        } else {
-            SecurityLevel::Insecure
-        };
-
-        // Atualizar estado inicial de carregamento
-        {
-            let mut state = self.current_state.borrow_mut();
-            state.url = url.to_string();
-            state.title = "Carregando...".to_string();
-            state.security_level = sec_level;
-            state.is_loading = true;
-            state.progress = 0.3;
-            self.update_can_go(&mut state);
-            (self.on_state_changed)(&state);
-        }
-
-        let target_url = url.to_string();
-        let (sender, receiver) = std::sync::mpsc::channel::<NetworkResponse>();
-
-        let self_weak = Rc::downgrade(self);
-        glib::idle_add_local(move || {
-            match receiver.try_recv() {
-                Ok(msg) => {
-                    if let Some(this) = self_weak.upgrade() {
-                        match msg {
-                            NetworkResponse::Success {
-                                url,
-                                title,
-                                body,
-                                status,
-                                sec_level,
-                            } => {
-                                this.render_html_content(&url, &title, &body, status, sec_level);
-                            }
-                            NetworkResponse::Error { url, message } => {
-                                this.render_error_page(&url, &message);
-                            }
-                        }
-                    }
-                    glib::ControlFlow::Break
-                }
-                Err(std::sync::mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
-                Err(std::sync::mpsc::TryRecvError::Disconnected) => glib::ControlFlow::Break,
-            }
-        });
-
-        // Carregar em thread separada de I/O de rede
-        std::thread::spawn(move || {
-            let user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36 Brunya/0.3.0";
-
-            let config_res = ureq::Agent::config_builder()
-                .timeout_global(Some(std::time::Duration::from_secs(12)))
-                .build();
-            let agent = ureq::Agent::new_with_config(config_res);
-
-            match agent.get(&target_url).header("User-Agent", user_agent).call() {
-                Ok(mut response) => {
-                    let status = response.status().as_u16() as i32;
-                    let body = response.body_mut().read_to_string().unwrap_or_default();
-                    let title = Self::extract_html_title(&body)
-                        .unwrap_or_else(|| target_url.clone());
-
-                    sender
-                        .send(NetworkResponse::Success {
-                            url: target_url,
-                            title,
-                            body,
-                            status,
-                            sec_level,
-                        })
-                        .ok();
-                }
-                Err(err) => {
-                    error!("Erro ao carregar URL '{}': {}", target_url, err);
-                    sender
-                        .send(NetworkResponse::Error {
-                            url: target_url,
-                            message: err.to_string(),
-                        })
-                        .ok();
-                }
-            }
-        });
-    }
-
-    fn render_html_content(
-        self: &Rc<Self>,
-        url: &str,
-        title: &str,
-        html_body: &str,
-        status_code: i32,
-        sec_level: SecurityLevel,
-    ) {
-        self.clear_content();
-        self.progress_bar.set_fraction(1.0);
-        self.progress_bar.set_visible(false);
-        self.is_loading.store(false, Ordering::SeqCst);
-
-        // Salvar no histórico persistente SQLite (apenas em modo normal, NUNCA em modo privado)
-        if !self.is_private {
-            self.storage.record_history_visit(url, title).ok();
-        }
-
-        // Container rolável do conteúdo web
-        let scroll = ScrolledWindow::builder()
-            .hscrollbar_policy(gtk4::PolicyType::Automatic)
-            .vscrollbar_policy(gtk4::PolicyType::Automatic)
-            .build();
-
-        let page_box = GtkBox::new(Orientation::Vertical, 16);
-        page_box.set_margin_top(24);
-        page_box.set_margin_bottom(24);
-        page_box.set_margin_start(32);
-        page_box.set_margin_end(32);
-
-        // Barra informativa da página carregada
-        let info_card = GtkBox::new(Orientation::Horizontal, 12);
-        info_card.set_margin_bottom(8);
-        info_card.add_css_class("card");
-
-        let status_badge = Label::builder()
-            .label(&format!("Status: HTTP {}", status_code))
-            .css_classes(["caption", "bold"])
-            .build();
-
-        let url_badge = Label::builder()
-            .label(url)
-            .css_classes(["caption", "dim-label"])
-            .hexpand(true)
-            .halign(Align::Start)
-            .ellipsize(gtk4::pango::EllipsizeMode::End)
-            .build();
-
-        info_card.append(&status_badge);
-        info_card.append(&url_badge);
-        page_box.append(&info_card);
-
-        // 1. Detectar páginas de desafio Anti-Bot (como Startpage Anubis / Cloudflare)
-        let is_challenge = html_body.contains("Verifying your request")
-            || html_body.contains("anubis_challenge")
-            || html_body.contains("cf-browser-verification")
-            || html_body.contains("challenge-running");
-
-        if is_challenge {
-            let challenge_card = GtkBox::new(Orientation::Vertical, 12);
-            challenge_card.add_css_class("card");
-            challenge_card.set_margin_bottom(16);
-
-            let warn_title = Label::builder()
-                .label("⚠️ Desafio Anti-Bot Detectado no Motor de Busca")
-                .css_classes(["title-3", "heading", "warning"])
-                .halign(Align::Start)
-                .build();
-
-            let warn_desc = Label::builder()
-                .label("O motor Startpage solicitou a execução de um desafio JavaScript de verificação (Proof-of-Work anti-bot).\nEscolha um dos motores abaixo para carregar os resultados imediatos desta busca:")
-                .wrap(true)
-                .halign(Align::Start)
-                .build();
-
-            let query_str = Self::extract_query_param(url).unwrap_or_else(|| "pesquisa".to_string());
-            let buttons_row = GtkBox::new(Orientation::Horizontal, 8);
-
-            let ddg_btn = Button::builder()
-                .label("Buscar no DuckDuckGo (Resultados Diretos)")
-                .css_classes(["suggested-action", "pill"])
-                .build();
-            let q_ddg = query_str.clone();
-            let this_ddg = self.clone();
-            ddg_btn.connect_clicked(move |_| {
-                this_ddg.load_url(&format!("https://html.duckduckgo.com/html/?q={}", q_ddg));
-            });
-
-            let google_btn = Button::builder()
-                .label("Buscar no Google")
-                .css_classes(["flat", "pill"])
-                .build();
-            let q_google = query_str.clone();
-            let this_google = self.clone();
-            google_btn.connect_clicked(move |_| {
-                this_google.load_url(&format!("https://www.google.com/search?q={}", q_google));
-            });
-
-            let bing_btn = Button::builder()
-                .label("Buscar no Bing")
-                .css_classes(["flat", "pill"])
-                .build();
-            let q_bing = query_str.clone();
-            let this_bing = self.clone();
-            bing_btn.connect_clicked(move |_| {
-                this_bing.load_url(&format!("https://www.bing.com/search?q={}", q_bing));
-            });
-
-            buttons_row.append(&ddg_btn);
-            buttons_row.append(&google_btn);
-            buttons_row.append(&bing_btn);
-
-            challenge_card.append(&warn_title);
-            challenge_card.append(&warn_desc);
-            challenge_card.append(&buttons_row);
-            page_box.append(&challenge_card);
-        }
-
-        // 2. Extrair e renderizar resultados estruturados de busca
-        let search_results = Self::parse_search_results(html_body);
-        if !search_results.is_empty() {
-            let results_title = Label::builder()
-                .label(&format!("Resultados Encontrados ({})", search_results.len()))
-                .css_classes(["heading", "title-4"])
-                .halign(Align::Start)
-                .margin_bottom(8)
-                .build();
-            page_box.append(&results_title);
-
-            for item in search_results {
-                let card = GtkBox::new(Orientation::Vertical, 4);
-                card.add_css_class("card");
-                card.set_margin_bottom(12);
-
-                let url_lbl = Label::builder()
-                    .label(&item.url)
-                    .css_classes(["caption", "success"])
-                    .halign(Align::Start)
-                    .ellipsize(gtk4::pango::EllipsizeMode::End)
-                    .build();
-
-                let title_btn = Button::builder()
-                    .label(&item.title)
-                    .css_classes(["flat", "title-4", "accent"])
-                    .halign(Align::Start)
-                    .build();
-
-                let target_nav = item.url.clone();
-                let this_nav = self.clone();
-                title_btn.connect_clicked(move |_| {
-                    this_nav.load_url(&target_nav);
-                });
-
-                let snippet_lbl = Label::builder()
-                    .label(&item.snippet)
-                    .wrap(true)
-                    .halign(Align::Start)
-                    .build();
-
-                card.append(&url_lbl);
-                card.append(&title_btn);
-                card.append(&snippet_lbl);
-                page_box.append(&card);
-            }
-        } else if !is_challenge {
-            // 3. Renderização para páginas genéricas (como kernel.org)
-            let text_buffer = TextBuffer::new(None::<&TextTagTable>);
-            let clean_text = Self::strip_html_to_readable_text(html_body);
-            text_buffer.set_text(&clean_text);
-
-            let text_view = TextView::builder()
-                .buffer(&text_buffer)
-                .editable(false)
-                .cursor_visible(false)
-                .wrap_mode(gtk4::WrapMode::Word)
-                .vexpand(true)
-                .hexpand(true)
-                .css_classes(["card"])
-                .build();
-
-            page_box.append(&text_view);
-        }
-
-        scroll.set_child(Some(&page_box));
-        scroll.set_vexpand(true);
-        scroll.set_hexpand(true);
-        self.content_area.append(&scroll);
-
-        // Atualizar estado
-        let mut state = self.current_state.borrow_mut();
-        state.url = url.to_string();
-        state.title = title.to_string();
-        state.security_level = sec_level;
-        state.status_code = Some(status_code);
-        state.is_loading = false;
-        state.progress = 1.0;
-        self.update_can_go(&mut state);
+        state.can_go_back = false;
+        state.can_go_forward = false;
         (self.on_state_changed)(&state);
     }
 
     fn render_error_page(&self, url: &str, error_msg: &str) {
-        self.clear_content();
+        self.clear_internal_area();
+        self.webkit_view.set_visible(false);
+        self.internal_area.set_visible(true);
         self.progress_bar.set_visible(false);
         self.is_loading.store(false, Ordering::SeqCst);
 
@@ -532,196 +346,48 @@ impl WebView {
         err_box.set_vexpand(true);
         err_box.set_hexpand(true);
 
-        self.content_area.append(&err_box);
+        self.internal_area.append(&err_box);
 
         let mut state = self.current_state.borrow_mut();
         state.url = url.to_string();
         state.title = "Erro de Conexão".to_string();
         state.security_level = SecurityLevel::BrokenTls;
         state.is_loading = false;
-        self.update_can_go(&mut state);
         (self.on_state_changed)(&state);
     }
 
-    fn clear_content(&self) {
-        while let Some(child) = self.content_area.first_child() {
-            self.content_area.remove(&child);
+    fn clear_internal_area(&self) {
+        while let Some(child) = self.internal_area.first_child() {
+            self.internal_area.remove(&child);
         }
     }
 
-    fn update_can_go(&self, state: &mut NavigationState) {
-        let stack = self.history_stack.borrow();
-        let idx = *self.history_index.borrow();
-        state.can_go_back = idx > 0;
-        state.can_go_forward = idx + 1 < stack.len();
-    }
-
     pub fn go_back(self: &Rc<Self>) {
-        let prev_url = {
-            let stack = self.history_stack.borrow();
-            let mut idx = self.history_index.borrow_mut();
-            if *idx > 0 {
-                *idx -= 1;
-                Some(stack[*idx].clone())
-            } else {
-                None
-            }
-        };
-
-        if let Some(url) = prev_url {
-            if url.starts_with("brunya://") {
-                self.render_internal_page(&url);
-            } else {
-                self.fetch_and_render_web_page(&url);
-            }
+        if self.webkit_view.is_visible() && self.webkit_view.can_go_back() {
+            self.webkit_view.go_back();
+        } else {
+            self.load_url("brunya://newtab");
         }
     }
 
     pub fn go_forward(self: &Rc<Self>) {
-        let next_url = {
-            let stack = self.history_stack.borrow();
-            let mut idx = self.history_index.borrow_mut();
-            if *idx + 1 < stack.len() {
-                *idx += 1;
-                Some(stack[*idx].clone())
-            } else {
-                None
-            }
-        };
-
-        if let Some(url) = next_url {
-            if url.starts_with("brunya://") {
-                self.render_internal_page(&url);
-            } else {
-                self.fetch_and_render_web_page(&url);
-            }
+        if self.webkit_view.is_visible() && self.webkit_view.can_go_forward() {
+            self.webkit_view.go_forward();
         }
     }
 
     pub fn reload(self: &Rc<Self>) {
-        let url = self.current_state.borrow().url.clone();
-        self.load_url(&url);
-    }
-
-    fn extract_html_title(html: &str) -> Option<String> {
-        let lower = html.to_lowercase();
-        let start_tag = "<title>";
-        let end_tag = "</title>";
-
-        let start_pos = lower.find(start_tag)? + start_tag.len();
-        let end_pos = lower[start_pos..].find(end_tag)? + start_pos;
-
-        let raw_title = &html[start_pos..end_pos];
-        Some(raw_title.trim().replace('\n', " ").replace('\r', ""))
-    }
-
-    fn strip_html_to_readable_text(html: &str) -> String {
-        let mut in_tag = false;
-        let mut in_script = false;
-        let mut in_style = false;
-        let mut text = String::with_capacity(html.len() / 2);
-        let mut lower_tracker = String::new();
-
-        for ch in html.chars() {
-            if ch == '<' {
-                in_tag = true;
-                lower_tracker.clear();
-            } else if ch == '>' {
-                in_tag = false;
-                let tag_lower = lower_tracker.to_lowercase();
-                if tag_lower.starts_with("script") {
-                    in_script = true;
-                } else if tag_lower.starts_with("/script") {
-                    in_script = false;
-                } else if tag_lower.starts_with("style") {
-                    in_style = true;
-                } else if tag_lower.starts_with("/style") {
-                    in_style = false;
-                } else if tag_lower == "p" || tag_lower == "/p" || tag_lower == "br" || tag_lower.starts_with("h") {
-                    text.push('\n');
-                }
-            } else if in_tag {
-                lower_tracker.push(ch);
-            } else if !in_script && !in_style {
-                text.push(ch);
-            }
+        if self.webkit_view.is_visible() {
+            self.webkit_view.reload();
+        } else {
+            let u = self.current_state.borrow().url.clone();
+            self.load_url(&u);
         }
-
-        let mut cleaned = String::new();
-        let mut was_whitespace = false;
-        for c in text.chars() {
-            if c.is_whitespace() {
-                if c == '\n' {
-                    cleaned.push('\n');
-                    was_whitespace = false;
-                } else if !was_whitespace {
-                    cleaned.push(' ');
-                    was_whitespace = true;
-                }
-            } else {
-                cleaned.push(c);
-                was_whitespace = false;
-            }
-        }
-
-        cleaned
     }
 
-    fn extract_query_param(url_str: &str) -> Option<String> {
-        if let Ok(parsed) = url::Url::parse(url_str) {
-            for (k, v) in parsed.query_pairs() {
-                if k == "q" || k == "query" || k == "p" || k == "wd" || k == "text" {
-                    let s = v.trim().to_string();
-                    if !s.is_empty() {
-                        return Some(s);
-                    }
-                }
-            }
+    pub fn stop(self: &Rc<Self>) {
+        if self.webkit_view.is_visible() {
+            self.webkit_view.stop_loading();
         }
-        None
     }
-
-    fn parse_search_results(html: &str) -> Vec<ParsedResult> {
-        let mut list = Vec::new();
-
-        // 1. Padrão DuckDuckGo HTML
-        let ddg_re = regex::Regex::new(
-            r#"(?s)<h2[^>]*class="[^"]*result__title[^"]*"[^>]*>\s*<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>\s*</h2>.*?<a[^>]*class="result__snippet[^"]*"[^>]*>(.*?)</a>"#
-        );
-        if let Ok(re) = ddg_re {
-            for cap in re.captures_iter(html) {
-                let mut raw_link = cap.get(1).map_or("", |m| m.as_str()).to_string();
-                if let Ok(parsed) = url::Url::parse(&format!("https:{}", if raw_link.starts_with("//") { &raw_link } else { &raw_link })) {
-                    for (k, v) in parsed.query_pairs() {
-                        if k == "uddg" {
-                            raw_link = v.to_string();
-                            break;
-                        }
-                    }
-                }
-
-                let raw_title = cap.get(2).map_or("", |m| m.as_str());
-                let raw_snippet = cap.get(3).map_or("", |m| m.as_str());
-
-                let title = Self::strip_html_to_readable_text(raw_title).replace('\n', " ").trim().to_string();
-                let snippet = Self::strip_html_to_readable_text(raw_snippet).replace('\n', " ").trim().to_string();
-
-                if !title.is_empty() {
-                    list.push(ParsedResult {
-                        title,
-                        url: raw_link,
-                        snippet,
-                    });
-                }
-            }
-        }
-
-        list
-    }
-}
-
-pub struct ParsedResult {
-    pub title: String,
-    pub url: String,
-    pub snippet: String,
 }

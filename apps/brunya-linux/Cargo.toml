@@ -22,6 +22,7 @@ glib.workspace = true
 gio.workspace = true
 gdk4.workspace = true
 cairo-rs.workspace = true
+webkit6.workspace = true
 
 cef = { workspace = true, optional = true }
 cef-dll-sys = { workspace = true, optional = true }

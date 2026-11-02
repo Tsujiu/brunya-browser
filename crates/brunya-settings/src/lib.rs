@@ -68,8 +68,8 @@ pub struct SearchEngine {
 impl Default for SearchEngine {
     fn default() -> Self {
         Self {
-            name: "DuckDuckGo".to_string(),
-            query_template: "https://html.duckduckgo.com/html/?q=%s".to_string(),
+            name: "Startpage".to_string(),
+            query_template: "https://www.startpage.com/sp/search?query=%s".to_string(),
         }
     }
 }

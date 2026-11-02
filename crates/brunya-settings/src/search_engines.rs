@@ -10,13 +10,13 @@ pub struct SearchEngineDef {
 }
 
 pub static ALL_SEARCH_ENGINES: &[SearchEngineDef] = &[
-    // Populares e Gerais
-    SearchEngineDef { id: "google", name: "Google", category: "Geral", query_template: "https://www.google.com/search?q=%s", glyph: "G" },
-    SearchEngineDef { id: "bing", name: "Microsoft Bing", category: "Geral", query_template: "https://www.bing.com/search?q=%s", glyph: "b" },
-    SearchEngineDef { id: "yahoo", name: "Yahoo! Search", category: "Geral", query_template: "https://search.yahoo.com/search?p=%s", glyph: "Y!" },
-    SearchEngineDef { id: "duckduckgo", name: "DuckDuckGo", category: "Privacidade", query_template: "https://html.duckduckgo.com/html/?q=%s", glyph: "🦆" },
-    SearchEngineDef { id: "brave", name: "Brave Search", category: "Privacidade", query_template: "https://search.brave.com/search?q=%s", glyph: "🦁" },
+    // Motor Principal Recomendado por Padrão
     SearchEngineDef { id: "startpage", name: "Startpage", category: "Privacidade", query_template: "https://www.startpage.com/sp/search?query=%s", glyph: "SP" },
+    SearchEngineDef { id: "google", name: "Google", category: "Geral", query_template: "https://www.google.com/search?q=%s", glyph: "G" },
+    SearchEngineDef { id: "duckduckgo", name: "DuckDuckGo", category: "Privacidade", query_template: "https://duckduckgo.com/?q=%s", glyph: "🦆" },
+    SearchEngineDef { id: "bing", name: "Microsoft Bing", category: "Geral", query_template: "https://www.bing.com/search?q=%s", glyph: "b" },
+    SearchEngineDef { id: "brave", name: "Brave Search", category: "Privacidade", query_template: "https://search.brave.com/search?q=%s", glyph: "🦁" },
+    SearchEngineDef { id: "yahoo", name: "Yahoo! Search", category: "Geral", query_template: "https://search.yahoo.com/search?p=%s", glyph: "Y!" },
     SearchEngineDef { id: "qwant", name: "Qwant", category: "Privacidade", query_template: "https://www.qwant.com/?q=%s", glyph: "Q" },
     SearchEngineDef { id: "mojeek", name: "Mojeek", category: "Privacidade", query_template: "https://www.mojeek.com/search?q=%s", glyph: "M" },
     SearchEngineDef { id: "swisscows", name: "Swisscows", category: "Privacidade", query_template: "https://swisscows.com/web?query=%s", glyph: "🐮" },
