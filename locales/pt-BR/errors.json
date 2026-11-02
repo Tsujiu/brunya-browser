@@ -5,7 +5,7 @@
   "cert_expired": "O certificado de segurança deste site expirou",
   "connection_refused": "Conexão recusada pelo servidor",
   "timed_out": "O tempo limite de conexão foi atingido",
-  "blocked_by_adblock": "Requisição bloqueada pelo Escudo do BEAR",
+  "blocked_by_adblock": "Requisição bloqueada pelo Escudo do Brunya",
   "process_crashed": "O processo desta página foi encerrado inesperadamente",
   "reload_page": "Recarregar Página"
 }

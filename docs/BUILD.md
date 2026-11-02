@@ -1,6 +1,6 @@
-# Guia de Compilação e Reprodução — BEAR Browser
+# Guia de Compilação e Reprodução — Brunya Browser
 
-Este documento detalha o procedimento exato e reproduzível para compilar, testar e executar o BEAR Browser a partir do código-fonte em distribuições Linux (com foco em **Linux Mint 22** e **Ubuntu 24.04 LTS**).
+Este documento detalha o procedimento exato e reproduzível para compilar, testar e executar o Brunya Browser a partir do código-fonte em distribuições Linux (com foco em **Linux Mint 22** e **Ubuntu 24.04 LTS**).
 
 ---
 
@@ -69,7 +69,7 @@ cargo build --workspace --release
 ```
 
 Os binários finais serão gerados em:
-`target/release/bear-linux`
+`target/release/brunya-linux`
 
 ---
 
@@ -83,7 +83,7 @@ cargo test --workspace
 
 Para rodar testes de um módulo específico (exemplo, adblock):
 ```bash
-cargo test -p bear-adblock
+cargo test -p brunya-adblock
 ```
 
 ---
@@ -92,20 +92,20 @@ cargo test -p bear-adblock
 
 ### Executar a aplicação principal
 ```bash
-cargo run -p bear-linux
+cargo run -p brunya-linux
 ```
 
 ### Abrir com URLs específicas na inicialização
 ```bash
-cargo run -p bear-linux -- "https://kernel.org" "https://linuxmint.com"
+cargo run -p brunya-linux -- "https://kernel.org" "https://linuxmint.com"
 ```
 
 ### Executar benchmark de inicialização e memória
 ```bash
-cargo run -p bear-linux -- --benchmark
+cargo run -p brunya-linux -- --benchmark
 ```
 
 ### Verificar o suporte do sandbox no Linux
 ```bash
-cargo run -p bear-linux -- --check-sandbox
+cargo run -p brunya-linux -- --check-sandbox
 ```

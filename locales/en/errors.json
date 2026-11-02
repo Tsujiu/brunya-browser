@@ -5,7 +5,7 @@
   "cert_expired": "The security certificate for this site has expired",
   "connection_refused": "Connection refused by the server",
   "timed_out": "The connection timed out",
-  "blocked_by_adblock": "Request blocked by BEAR Shield",
+  "blocked_by_adblock": "Request blocked by Brunya Shield",
   "process_crashed": "The web page process crashed unexpectedly",
   "reload_page": "Reload Page"
 }

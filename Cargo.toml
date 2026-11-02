@@ -1,25 +1,25 @@
 [workspace]
 members = [
-    "apps/bear-linux",
-    "crates/bear-core",
-    "crates/bear-i18n",
-    "crates/bear-storage",
-    "crates/bear-adblock",
-    "crates/bear-privacy",
-    "crates/bear-tabs",
-    "crates/bear-settings",
-    "crates/bear-diagnostics",
+    "apps/brunya-linux",
+    "crates/brunya-core",
+    "crates/brunya-i18n",
+    "crates/brunya-storage",
+    "crates/brunya-adblock",
+    "crates/brunya-privacy",
+    "crates/brunya-tabs",
+    "crates/brunya-settings",
+    "crates/brunya-diagnostics",
 ]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.3.0"
 edition = "2021"
-authors = ["BEAR Browser Team <142347573+Tsujiu@users.noreply.github.com>"]
+authors = ["Brunya Browser Team <142347573+Tsujiu@users.noreply.github.com>"]
 license = "Apache-2.0"
-repository = "https://github.com/bear-browser/bear-browser"
-homepage = "https://bearbrowser.org"
-description = "BEAR Browser — Navegador web rápido, leve e privado para Linux"
+repository = "https://github.com/brunya-browser/brunya-browser"
+homepage = "https://brunyabrowser.org"
+description = "Brunya Browser — Navegador web rápido, leve e privado para Linux"
 
 [workspace.dependencies]
 # GTK & Libadwaita
@@ -46,16 +46,18 @@ chrono = { version = "0.4", features = ["serde"] }
 parking_lot = "0.12"
 regex = "1.11"
 ureq = "3.5"
+ring = "0.17"
+libc = "0.2"
 
 # Internal crates
-bear-core = { path = "crates/bear-core" }
-bear-i18n = { path = "crates/bear-i18n" }
-bear-storage = { path = "crates/bear-storage" }
-bear-adblock = { path = "crates/bear-adblock" }
-bear-privacy = { path = "crates/bear-privacy" }
-bear-tabs = { path = "crates/bear-tabs" }
-bear-settings = { path = "crates/bear-settings" }
-bear-diagnostics = { path = "crates/bear-diagnostics" }
+brunya-core = { path = "crates/brunya-core" }
+brunya-i18n = { path = "crates/brunya-i18n" }
+brunya-storage = { path = "crates/brunya-storage" }
+brunya-adblock = { path = "crates/brunya-adblock" }
+brunya-privacy = { path = "crates/brunya-privacy" }
+brunya-tabs = { path = "crates/brunya-tabs" }
+brunya-settings = { path = "crates/brunya-settings" }
+brunya-diagnostics = { path = "crates/brunya-diagnostics" }
 
 # Otimizações de compilação
 [profile.dev]

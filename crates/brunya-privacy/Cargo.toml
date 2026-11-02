@@ -1,0 +1,18 @@
+[package]
+name = "brunya-privacy"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Gestor de privacidade, permissões de sites e navegação privada do Brunya Browser"
+
+[dependencies]
+brunya-core.workspace = true
+brunya-storage.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+parking_lot.workspace = true
+
+[dev-dependencies]
