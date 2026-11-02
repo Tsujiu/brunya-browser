@@ -1,39 +1,185 @@
-/* Estilos da Nova Aba inspirados no Pesquisa — Modo Escuro Oficial por Padrão */
+@define-color brunya_bg #0f1216;
+@define-color brunya_header #12161c;
+@define-color brunya_card #171b21;
+@define-color brunya_card_hover #1c222b;
+@define-color brunya_border #292524;
+@define-color brunya_text #f1f5f9;
+@define-color brunya_text_muted #94a3b8;
+@define-color brunya_accent #38bdf8;
+@define-color brunya_accent_blue #0284c7;
 
+window,
+window.background {
+    background-color: @brunya_bg;
+    color: @brunya_text;
+}
+
+headerbar {
+    background-color: @brunya_header;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    min-height: 50px;
+    padding: 0 12px;
+}
+
+/* Botões de navegação circulares e modernos */
+.nav-btn {
+    border-radius: 9999px;
+    padding: 6px;
+    min-width: 32px;
+    min-height: 32px;
+    color: @brunya_text_muted;
+    background-color: transparent;
+    border: 1px solid transparent;
+}
+
+.nav-btn:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: @brunya_text;
+}
+
+/* 3. BARRA DE ENDEREÇO (OMNIBOX) REFINADA */
+.address-container {
+    background-color: @brunya_card;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    padding: 2px 10px;
+    margin: 4px 16px;
+}
+
+.address-container:hover {
+    border-color: rgba(255, 255, 255, 0.22);
+    background-color: @brunya_card_hover;
+}
+
+.address-container:focus-within {
+    background-color: #1a2028;
+    border-color: @brunya_accent;
+}
+
+.address-entry {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: @brunya_text;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    padding: 4px 6px;
+}
+
+/* Chip do Escudo de Privacidade */
+.shield-chip {
+    background-color: rgba(56, 189, 248, 0.12);
+    color: @brunya_accent;
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 14px;
+    padding: 2px 10px;
+}
+
+.shield-chip:hover {
+    background-color: rgba(56, 189, 248, 0.25);
+    border-color: @brunya_accent;
+}
+
+/* 4. BARRA DE ABAS MODERNA */
+.tab-bar {
+    background-color: #0c0e12;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 4px 8px 0 8px;
+}
+
+.tab-pill {
+    border-radius: 8px 8px 0 0;
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    padding: 5px 8px 5px 10px;
+    margin: 0 2px;
+    min-width: 140px;
+}
+
+.tab-pill:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.tab-pill.active {
+    background-color: @brunya_card;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.tab-select-btn {
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+.tab-close-btn {
+    border-radius: 9999px;
+    padding: 3px;
+    min-width: 20px;
+    min-height: 20px;
+    opacity: 0.55;
+}
+
+.tab-close-btn:hover {
+    opacity: 1.0;
+    background-color: rgba(239, 68, 68, 0.25);
+    color: #ef4444;
+}
+
+/* 5. PÁGINA INICIAL "PESQUISA." — DESIGN ELEGANTE */
 .pesquisa-page,
 .pesquisa-page viewport,
 .pesquisa-page > viewport {
-    background-color: #0f1216;
-    color: #e7e5e4;
+    background-color: @brunya_bg;
+    color: @brunya_text;
 }
 
 .pesquisa-logo {
     font-family: 'Fraunces', 'Georgia', 'DejaVu Serif', serif;
-    font-size: 72px;
+    font-size: 84px;
     font-weight: 700;
-    letter-spacing: -1.5px;
-    color: #e7e5e4;
+    letter-spacing: -2px;
+    color: #f8fafc;
 }
 
 .pesquisa-tagline {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    font-size: 16px;
-    color: #a8a29e;
-    margin-top: 6px;
-    margin-bottom: 24px;
+    font-size: 17px;
+    font-weight: 400;
+    color: @brunya_text_muted;
+    letter-spacing: -0.2px;
+    margin-top: 8px;
+    margin-bottom: 28px;
 }
 
+/* Caixa de pesquisa central tipo cápsula */
 .pesquisa-search-container {
-    background-color: #171b21;
-    border: 1px solid #292524;
-    border-radius: 8px;
-    padding: 6px 14px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+    background-color: @brunya_card;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 28px;
+    padding: 8px 18px;
+}
+
+.pesquisa-search-container:hover {
+    border-color: rgba(255, 255, 255, 0.20);
+    background-color: @brunya_card_hover;
 }
 
 .pesquisa-search-container:focus-within {
-    border-color: #38bdf8;
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+    background-color: #1a212a;
+    border-color: @brunya_accent;
+}
+
+.engine-picker-btn {
+    border-radius: 18px;
+    padding: 4px 10px;
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.engine-picker-btn:hover {
+    background-color: rgba(56, 189, 248, 0.18);
+    border-color: @brunya_accent;
 }
 
 .pesquisa-entry {
@@ -42,39 +188,51 @@
     box-shadow: none;
     font-size: 16px;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    color: #e7e5e4;
-}
-
-.pesquisa-entry placeholder {
-    color: #78716c;
+    color: @brunya_text;
 }
 
 .pesquisa-btn-primary {
-    background-color: #1e3a8a;
+    background-color: @brunya_accent_blue;
     color: #ffffff;
-    border: 1px solid #2563eb;
-    border-radius: 6px;
-    padding: 10px 32px;
+    border: 1px solid @brunya_accent;
+    border-radius: 24px;
+    padding: 11px 36px;
     font-size: 15px;
     font-weight: 600;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    transition: all 180ms ease;
 }
 
 .pesquisa-btn-primary:hover {
-    background-color: #2563eb;
-    border-color: #38bdf8;
-    color: #ffffff;
+    background-color: #0369a1;
+    border-color: #7dd3fc;
 }
 
 .pesquisa-footer-text {
     font-size: 13px;
-    color: #a8a29e;
+    color: @brunya_text_muted;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* Modo Claro (Ativado apenas quando o usuário clica no alternador de tema) */
+/* 6. BARRA DE PROGRESSO ULTRA-FINA */
+progressbar trough {
+    min-height: 2px;
+    border: none;
+    background-color: transparent;
+}
+
+progressbar progress {
+    min-height: 2px;
+    border-radius: 2px;
+    background-color: @brunya_accent;
+}
+
+/* 7. MODO CLARO (QUANDO SELECIONADO PELO ALTERNADOR) */
+window.light-theme,
+window.light-theme headerbar {
+    background-color: #f4f1ea;
+    border-color: #d6d0c4;
+}
+
 window.light-theme .pesquisa-page,
 window.light-theme .pesquisa-page viewport,
 .pesquisa-light,
@@ -83,130 +241,52 @@ window.light-theme .pesquisa-page viewport,
     color: #1c1917;
 }
 
-window.light-theme .pesquisa-logo,
-.pesquisa-light .pesquisa-logo {
+window.light-theme .address-container {
+    background-color: #fbf9f4;
+    border-color: #d6d0c4;
+}
+
+window.light-theme .address-container:focus-within {
+    border-color: #1e3a5f;
+}
+
+window.light-theme .address-entry {
     color: #1c1917;
 }
 
-window.light-theme .pesquisa-tagline,
-.pesquisa-light .pesquisa-tagline {
+window.light-theme .pesquisa-logo {
+    color: #1c1917;
+}
+
+window.light-theme .pesquisa-tagline {
     color: #57534e;
 }
 
-window.light-theme .pesquisa-search-container,
-.pesquisa-light .pesquisa-search-container {
+window.light-theme .pesquisa-search-container {
     background-color: #fbf9f4;
     border-color: #d6d0c4;
-    box-shadow: 0 1px 3px rgba(28, 25, 23, 0.08);
 }
 
-window.light-theme .pesquisa-search-container:focus-within,
-.pesquisa-light .pesquisa-search-container:focus-within {
+window.light-theme .pesquisa-search-container:focus-within {
     border-color: #1e3a5f;
-    box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.25);
 }
 
-window.light-theme .pesquisa-entry,
-.pesquisa-light .pesquisa-entry {
+window.light-theme .pesquisa-entry {
     color: #1c1917;
 }
 
-window.light-theme .pesquisa-entry placeholder,
-.pesquisa-light .pesquisa-entry placeholder {
-    color: #a8a29e;
-}
-
-window.light-theme .pesquisa-btn-primary,
-.pesquisa-light .pesquisa-btn-primary {
+window.light-theme .pesquisa-btn-primary {
     background-color: #1e3a5f;
     color: #f4f1ea;
     border-color: #1e3a5f;
 }
 
-window.light-theme .pesquisa-btn-primary:hover,
-.pesquisa-light .pesquisa-btn-primary:hover {
+window.light-theme .pesquisa-btn-primary:hover {
     background-color: #1c1917;
     border-color: #1c1917;
     color: #ffffff;
 }
 
-window.light-theme .pesquisa-footer-text,
-.pesquisa-light .pesquisa-footer-text {
+window.light-theme .pesquisa-footer-text {
     color: #57534e;
-}
-
-/* Seletor Discreto de Motores de Busca */
-.engine-picker-btn {
-    border-radius: 6px;
-    padding: 3px 8px;
-    background-color: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    transition: all 180ms ease;
-}
-
-.engine-picker-btn:hover {
-    background-color: rgba(56, 189, 248, 0.18);
-    border-color: #38bdf8;
-}
-
-window.light-theme .engine-picker-btn {
-    background-color: rgba(0, 0, 0, 0.05);
-    border-color: rgba(0, 0, 0, 0.15);
-}
-
-/* Design Moderno e Fluido das Abas */
-.tab-pill {
-    border-radius: 8px;
-    background-color: transparent;
-    transition: background-color 200ms ease, border-color 200ms ease;
-    padding: 2px 4px 2px 6px;
-    margin: 2px 3px;
-    border: 1px solid transparent;
-}
-
-.tab-pill:hover {
-    background-color: rgba(255, 255, 255, 0.08);
-}
-
-.tab-pill.active {
-    background-color: rgba(255, 255, 255, 0.15);
-    border-color: rgba(56, 189, 248, 0.35);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.30);
-}
-
-window.light-theme .tab-pill:hover {
-    background-color: rgba(0, 0, 0, 0.06);
-}
-
-window.light-theme .tab-pill.active {
-    background-color: rgba(0, 0, 0, 0.10);
-    border-color: rgba(30, 58, 95, 0.35);
-}
-
-.tab-select-btn {
-    border: none;
-    background: transparent;
-    padding: 4px 6px;
-    border-radius: 6px;
-}
-
-/* Botão Fechar Aba Elegante e com Animação Fluida */
-.tab-close-btn {
-    border-radius: 9999px;
-    padding: 3px;
-    min-width: 22px;
-    min-height: 22px;
-    opacity: 0.55;
-    transition: opacity 160ms ease, background-color 160ms ease, transform 160ms ease;
-}
-
-.tab-close-btn:hover {
-    opacity: 1.0;
-    background-color: rgba(239, 68, 68, 0.25);
-    color: #ef4444;
-    transform: scale(1.15);
-}
-
-.tab-close-btn:active {
-    transform: scale(0.92);
 }

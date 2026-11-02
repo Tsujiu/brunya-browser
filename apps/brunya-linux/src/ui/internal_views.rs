@@ -33,10 +33,10 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(
     hero.set_margin_top(48);
     hero.set_margin_bottom(32);
 
-    // 1. Logo "Pesquisa." com a mesma fonte serifada e ponto estilizado em azul
+    // 1. Logo "Pesquisa." com a mesma fonte serifada e ponto estilizado em azul ciano brilhante
     let logo = Label::builder()
         .use_markup(true)
-        .label("<span font_family=\"Fraunces, Georgia, DejaVu Serif, serif\" size=\"56000\" weight=\"bold\">Pesquisa<span foreground=\"#93c5fd\">.</span></span>")
+        .label("<span font_family=\"Fraunces, Georgia, DejaVu Serif, serif\" size=\"64000\" weight=\"bold\">Pesquisa<span foreground=\"#38bdf8\">.</span></span>")
         .css_classes(["pesquisa-logo"])
         .build();
 
@@ -51,14 +51,14 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(
     hero.append(&logo);
     hero.append(&tagline);
 
-    // 3. Search Box Wrapper estilizado com Seletor Discreto de Motores de Busca
+    // 3. Search Box Wrapper estilizado tipo cápsula com Seletor Discreto de Motores de Busca
     let search_box = GtkBox::new(Orientation::Horizontal, 8);
     search_box.set_halign(Align::Center);
-    search_box.set_width_request(600);
+    search_box.set_width_request(640);
     search_box.add_css_class("pesquisa-search-container");
 
     let search_icon = Image::from_icon_name("system-search-symbolic");
-    search_icon.set_opacity(0.6);
+    search_icon.set_opacity(0.65);
 
     // Motor de busca ativo
     let current_engine = settings_mgr.get().search_engine;
@@ -69,37 +69,50 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(
         .tooltip_text("Selecionar motor de busca")
         .build();
 
-    let engine_content = GtkBox::new(Orientation::Horizontal, 4);
-    let engine_glyph = Label::builder()
-        .label("🦆")
-        .css_classes(["caption", "bold"])
-        .build();
+    let engine_content = GtkBox::new(Orientation::Horizontal, 6);
+    let engine_icon_box = GtkBox::new(Orientation::Horizontal, 0);
+
+    let initial_engine_id = if current_engine.name.to_lowercase().contains("startpage") {
+        "startpage"
+    } else if current_engine.name.to_lowercase().contains("google") {
+        "google"
+    } else if current_engine.name.to_lowercase().contains("bing") {
+        "bing"
+    } else {
+        "duckduckgo"
+    };
+    engine_icon_box.append(&crate::ui::engine_popover::get_engine_icon(initial_engine_id));
+
     let engine_arrow = Image::from_icon_name("pan-down-symbolic");
     engine_arrow.set_pixel_size(10);
 
-    engine_content.append(&engine_glyph);
+    engine_content.append(&engine_icon_box);
     engine_content.append(&engine_arrow);
     engine_btn.set_child(Some(&engine_content));
 
+    let initial_placeholder = format!("Pesquisar no {}...", current_engine.name);
     let search_entry = Entry::builder()
-        .placeholder_text("Pesquisar no Pesquisa...")
+        .placeholder_text(&initial_placeholder)
         .hexpand(true)
         .css_classes(["pesquisa-entry"])
         .build();
 
-    let engine_glyph_clone = engine_glyph.clone();
+    let engine_icon_box_clone = engine_icon_box.clone();
     let entry_for_ph = search_entry.clone();
     let template_store = selected_template.clone();
     let sm_clone = settings_mgr.clone();
 
     engine_btn.connect_clicked(move |btn| {
-        let g_clone = engine_glyph_clone.clone();
+        let icon_box_c = engine_icon_box_clone.clone();
         let entry_c = entry_for_ph.clone();
         let tmpl_c = template_store.clone();
         let sm_c = sm_clone.clone();
 
         let popover = crate::ui::engine_popover::SearchEnginePopover::new(move |engine| {
-            g_clone.set_label(engine.glyph);
+            while let Some(ch) = icon_box_c.first_child() {
+                icon_box_c.remove(&ch);
+            }
+            icon_box_c.append(&crate::ui::engine_popover::get_engine_icon(engine.id));
             entry_c.set_placeholder_text(Some(&format!("Pesquisar no {}...", engine.name)));
             *tmpl_c.borrow_mut() = engine.query_template.to_string();
             sm_c.update(|s| {
@@ -173,6 +186,54 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(
 
     buttons_box.append(&search_btn);
     hero.append(&buttons_box);
+
+    // Atalhos rápidos para alternar entre os motores mais populares
+    let chips_box = GtkBox::new(Orientation::Horizontal, 8);
+    chips_box.set_halign(Align::Center);
+    chips_box.set_margin_top(14);
+
+    let popular = [
+        ("Startpage", "startpage"),
+        ("DuckDuckGo", "duckduckgo"),
+        ("Google", "google"),
+        ("Brave", "brave"),
+        ("Bing", "bing"),
+    ];
+
+    for (name, id) in popular {
+        let chip = Button::builder()
+            .css_classes(["flat", "pill", "engine-picker-btn"])
+            .tooltip_text(&format!("Pesquisar no {}", name))
+            .build();
+        let chip_box = GtkBox::new(Orientation::Horizontal, 6);
+        chip_box.append(&crate::ui::engine_popover::get_engine_icon(id));
+        let chip_lbl = Label::builder().label(name).css_classes(["caption", "bold"]).build();
+        chip_box.append(&chip_lbl);
+        chip.set_child(Some(&chip_box));
+
+        let icon_box_chip = engine_icon_box.clone();
+        let entry_chip = search_entry.clone();
+        let tmpl_chip = selected_template.clone();
+        let sm_chip = settings_mgr.clone();
+        chip.connect_clicked(move |_| {
+            if let Some(def) = brunya_settings::search_engines::get_engine_by_id(id) {
+                while let Some(ch) = icon_box_chip.first_child() {
+                    icon_box_chip.remove(&ch);
+                }
+                icon_box_chip.append(&crate::ui::engine_popover::get_engine_icon(def.id));
+                entry_chip.set_placeholder_text(Some(&format!("Pesquisar no {}...", def.name)));
+                *tmpl_chip.borrow_mut() = def.query_template.to_string();
+                sm_chip.update(|s| {
+                    s.search_engine = brunya_settings::SearchEngine {
+                        name: def.name.to_string(),
+                        query_template: def.query_template.to_string(),
+                    };
+                }).ok();
+            }
+        });
+        chips_box.append(&chip);
+    }
+    hero.append(&chips_box);
 
     // 5. Rodapé discreto com dica de teclado
     let footer_box = GtkBox::new(Orientation::Vertical, 4);
