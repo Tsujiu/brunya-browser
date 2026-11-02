@@ -1,6 +1,110 @@
 [
   {
     "trigger": {
+      "url-filter": ".*imasdk\\.googleapis\\.com.*"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*securepubads\\.g\\.doubleclick\\.net.*"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*googleads\\.g\\.doubleclick\\.net.*"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*pubads\\.g\\.doubleclick\\.net.*"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*video-ad-stats\\.googlevideo\\.com.*"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com/youtubei/v1/player/ad_break.*"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com/get_midroll_info.*"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com/ptracking.*"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com/pagead/.*"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com/api/stats/ads.*"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*s\\.youtube\\.com.*"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*ad\\.youtube\\.com.*"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*ads\\.youtube\\.com.*"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
       "url-filter": ".*ad\\.doubleclick\\.net.*"
     },
     "action": {
@@ -1443,6 +1547,114 @@
     "action": {
       "type": "css-display-none",
       "selector": ".newsletter-signup-overlay"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com.*"
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": "ytd-ad-slot-renderer"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com.*"
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": "ytd-in-feed-ad-layout-renderer"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com.*"
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": "ytd-promoted-sparkles-web-renderer"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com.*"
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": "ytd-promoted-video-renderer"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com.*"
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": "ytd-banner-promo-renderer"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com.*"
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": ".video-ads"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com.*"
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": ".ytp-ad-module"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com.*"
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": ".ytp-ad-overlay-container"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com.*"
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": ".ytp-ad-player-overlay"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com.*"
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": ".ytp-ad-skip-button-container"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com.*"
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": ".ytp-ad-message-container"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com.*"
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": "#player-ads"
     }
   }
 ]
