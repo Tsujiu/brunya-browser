@@ -1,3 +1,4 @@
+use brunya_i18n::t;
 use brunya_privacy::PermissionType;
 use brunya_storage::{PermissionState, StorageManager};
 use gtk4::prelude::*;
@@ -25,11 +26,11 @@ impl SitePermissionsPopover {
 
         // Cabeçalho de Segurança
         let status_text = if origin.starts_with("brunya://") {
-            "Página Interna Segura"
+            "Página Interna Segura".to_string()
         } else if is_secure {
-            "Conexão Segura (HTTPS)"
+            "Conexão Segura (HTTPS)".to_string()
         } else {
-            "Não Seguro (HTTP)"
+            t!("common.not_secure")
         };
 
         let status_label = Label::builder()
@@ -49,7 +50,7 @@ impl SitePermissionsPopover {
 
         // Permissões do Site
         let perms_title = Label::builder()
-            .label("Permissões do Site")
+            .label(&t!("privacy.site_permissions"))
             .css_classes(["heading", "caption"])
             .halign(Align::Start)
             .margin_top(8)
@@ -57,10 +58,10 @@ impl SitePermissionsPopover {
         content.append(&perms_title);
 
         let perms = [
-            (PermissionType::Camera, "Câmera"),
-            (PermissionType::Microphone, "Microfone"),
-            (PermissionType::Geolocation, "Localização"),
-            (PermissionType::Notifications, "Notificações"),
+            (PermissionType::Camera, &t!("privacy.camera")),
+            (PermissionType::Microphone, &t!("privacy.microphone")),
+            (PermissionType::Geolocation, &t!("privacy.location")),
+            (PermissionType::Notifications, &t!("privacy.notifications")),
         ];
 
         for (perm_type, label_text) in perms {

@@ -40,6 +40,7 @@ pub struct BookmarkItem {
     pub url: String,
     pub title: String,
     pub folder: String,
+    pub custom_icon: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -238,6 +239,16 @@ impl StorageManager {
             )?;
         }
 
+        if current_version < 3 {
+            info!("Aplicando migração v3 do banco de dados Brunya (custom_icon nos favoritos)...");
+            conn.execute_batch(
+                "BEGIN;
+                ALTER TABLE bookmarks ADD COLUMN custom_icon TEXT;
+                INSERT INTO schema_migrations (version) VALUES (3);
+                COMMIT;",
+            )?;
+        }
+
         Ok(())
     }
 
@@ -300,8 +311,18 @@ impl StorageManager {
         let conn = self.conn.lock();
         let now_ts = Utc::now().timestamp();
         conn.execute(
-            "INSERT INTO bookmarks (url, title, folder, created_at) VALUES (?1, ?2, ?3, ?4)",
-            params![url, title, folder, now_ts],
+            "INSERT INTO bookmarks (url, title, folder, custom_icon, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![url, title, folder, Option::<String>::None, now_ts],
+        )?;
+        Ok(conn.last_insert_rowid())
+    }
+
+    pub fn add_bookmark_with_icon(&self, url: &str, title: &str, folder: &str, custom_icon: Option<&str>) -> Result<i64> {
+        let conn = self.conn.lock();
+        let now_ts = Utc::now().timestamp();
+        conn.execute(
+            "INSERT INTO bookmarks (url, title, folder, custom_icon, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![url, title, folder, custom_icon, now_ts],
         )?;
         Ok(conn.last_insert_rowid())
     }
@@ -309,17 +330,18 @@ impl StorageManager {
     pub fn list_bookmarks(&self) -> Result<Vec<BookmarkItem>> {
         let conn = self.conn.lock();
         let mut stmt = conn.prepare(
-            "SELECT id, url, title, folder, created_at FROM bookmarks ORDER BY id DESC",
+            "SELECT id, url, title, folder, custom_icon, created_at FROM bookmarks ORDER BY id DESC",
         )?;
 
         let rows = stmt.query_map([], |row| {
-            let ts: i64 = row.get(4)?;
+            let ts: i64 = row.get(5)?;
             let dt = DateTime::from_timestamp(ts, 0).unwrap_or_else(Utc::now);
             Ok(BookmarkItem {
                 id: row.get(0)?,
                 url: row.get(1)?,
                 title: row.get(2)?,
                 folder: row.get(3)?,
+                custom_icon: row.get(4)?,
                 created_at: dt,
             })
         })?;
@@ -329,6 +351,41 @@ impl StorageManager {
             items.push(r?);
         }
         Ok(items)
+    }
+
+    pub fn list_bookmarks_by_folder(&self, folder: &str) -> Result<Vec<BookmarkItem>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn.prepare(
+            "SELECT id, url, title, folder, custom_icon, created_at FROM bookmarks WHERE folder = ?1 ORDER BY id DESC",
+        )?;
+
+        let rows = stmt.query_map(params![folder], |row| {
+            let ts: i64 = row.get(5)?;
+            let dt = DateTime::from_timestamp(ts, 0).unwrap_or_else(Utc::now);
+            Ok(BookmarkItem {
+                id: row.get(0)?,
+                url: row.get(1)?,
+                title: row.get(2)?,
+                folder: row.get(3)?,
+                custom_icon: row.get(4)?,
+                created_at: dt,
+            })
+        })?;
+
+        let mut items = Vec::new();
+        for r in rows {
+            items.push(r?);
+        }
+        Ok(items)
+    }
+
+    pub fn update_bookmark(&self, id: i64, url: &str, title: &str, custom_icon: Option<&str>) -> Result<bool> {
+        let conn = self.conn.lock();
+        let rows = conn.execute(
+            "UPDATE bookmarks SET url = ?1, title = ?2, custom_icon = ?3 WHERE id = ?4",
+            params![url, title, custom_icon, id],
+        )?;
+        Ok(rows > 0)
     }
 
     pub fn delete_bookmark(&self, id: i64) -> Result<bool> {
@@ -433,6 +490,36 @@ impl StorageManager {
             Some(s) => PermissionState::from_str(&s),
             None => PermissionState::Ask,
         })
+    }
+
+    // --- Preferências KV (para extensões e módulos internos) ---
+
+    pub fn set_preference(&self, key: &str, value: &str) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            "INSERT INTO settings_kv (key, value) VALUES (?1, ?2)
+             ON CONFLICT(key) DO UPDATE SET value = ?2",
+            params![key, value],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_preference(&self, key: &str) -> Result<Option<String>> {
+        let conn = self.conn.lock();
+        let result: Option<String> = conn
+            .query_row(
+                "SELECT value FROM settings_kv WHERE key = ?1",
+                params![key],
+                |row| row.get(0),
+            )
+            .optional()?;
+        Ok(result)
+    }
+
+    pub fn delete_preference(&self, key: &str) -> Result<bool> {
+        let conn = self.conn.lock();
+        let rows = conn.execute("DELETE FROM settings_kv WHERE key = ?1", params![key])?;
+        Ok(rows > 0)
     }
 }
 

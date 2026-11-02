@@ -1,6 +1,7 @@
 use brunya_adblock::AdblockEngine;
 use brunya_core::traits::NetworkInterceptor;
 use brunya_core::types::{NavigationState, SecurityLevel, TabId};
+use brunya_extensions::ExtensionSystem;
 use brunya_i18n::t;
 use brunya_settings::SettingsManager;
 use brunya_storage::StorageManager;
@@ -26,6 +27,7 @@ pub struct WebView {
     adblock: Arc<AdblockEngine>,
     storage: Arc<StorageManager>,
     settings: Arc<SettingsManager>,
+    extension_system: Option<Arc<ExtensionSystem>>,
     _is_private: bool,
     is_loading: AtomicBool,
     on_state_changed: Rc<dyn Fn(&NavigationState)>,
@@ -37,6 +39,7 @@ impl WebView {
         adblock: Arc<AdblockEngine>,
         storage: Arc<StorageManager>,
         settings: Arc<SettingsManager>,
+        extension_system: Option<Arc<ExtensionSystem>>,
         is_private: bool,
         on_state_changed: Rc<dyn Fn(&NavigationState)>,
     ) -> Rc<Self> {
@@ -93,7 +96,7 @@ impl WebView {
             wk_settings.set_javascript_can_access_clipboard(true);
             wk_settings.set_enable_smooth_scrolling(true);
             wk_settings.set_user_agent(Some(
-                "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0",
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
             ));
         }
 
@@ -149,7 +152,7 @@ impl WebView {
         }
 
         let default_start = if is_private { "brunya://private" } else { "brunya://newtab" };
-        let default_title = if is_private { "Janela Privada" } else { "Nova Aba" };
+        let default_title = if is_private { t!("common.private_window_title") } else { t!("common.new_tab") };
 
         let initial_state = NavigationState {
             url: default_start.to_string(),
@@ -170,6 +173,7 @@ impl WebView {
             adblock: adblock.clone(),
             storage: storage.clone(),
             settings,
+            extension_system,
             _is_private: is_private,
             is_loading: AtomicBool::new(false),
             on_state_changed: on_state_changed.clone(),
@@ -384,8 +388,9 @@ impl WebView {
         let (title, widget) = match url {
             "brunya://newtab" => {
                 let self_clone = self.clone();
-                ("Nova Aba", crate::ui::internal_views::build_newtab_view(
+                (t!("common.new_tab"), crate::ui::internal_views::build_newtab_view(
                     self.settings.clone(),
+                    self.storage.clone(),
                     move |target| {
                         self_clone.load_url(target);
                     },
@@ -393,8 +398,9 @@ impl WebView {
             }
             "brunya://settings" => {
                 let self_clone = self.clone();
-                ("Configurações", crate::ui::internal_views::build_settings_view(
+                (t!("common.settings"), crate::ui::internal_views::build_settings_view(
                     self.settings.clone(),
+                    self.storage.clone(),
                     move |_lang| {
                         self_clone.render_internal_page("brunya://settings");
                     },
@@ -402,7 +408,7 @@ impl WebView {
             }
             "brunya://history" => {
                 let self_clone = self.clone();
-                ("Histórico", crate::ui::internal_views::build_history_view(
+                (t!("common.history"), crate::ui::internal_views::build_history_view(
                     self.storage.clone(),
                     move |target| {
                         self_clone.load_url(target);
@@ -410,22 +416,46 @@ impl WebView {
                 ))
             }
             "brunya://downloads" => {
-                ("Downloads", crate::ui::internal_views::build_downloads_view(
+                (t!("common.downloads"), crate::ui::internal_views::build_downloads_view(
                     self.storage.clone(),
                 ))
             }
             "brunya://bookmarks" => {
                 let self_clone = self.clone();
-                ("Favoritos", crate::ui::internal_views::build_bookmarks_view(
+                (t!("common.bookmarks"), crate::ui::internal_views::build_bookmarks_view(
                     self.storage.clone(),
                     move |target| {
                         self_clone.load_url(target);
                     },
                 ))
             }
-            "brunya://private" => ("Janela Privada", crate::ui::private_view::build_private_info_view()),
-            "brunya://about" => ("Sobre o Brunya", crate::ui::internal_views::build_about_view()),
-            _ => ("Página Não Encontrada", crate::ui::internal_views::build_about_view()),
+            "brunya://extensions" => {
+                let title = t!("extensions.extensions_title");
+                let widget = if let Some(ref ext_sys) = self.extension_system {
+                    let self_clone = self.clone();
+                    crate::ui::internal_views::build_extensions_view(
+                        ext_sys.clone(),
+                        self.storage.clone(),
+                        move |target| {
+                            self_clone.load_url(target);
+                        },
+                    )
+                } else {
+                    let fallback = GtkBox::new(Orientation::Vertical, 0);
+                    let label = Label::builder()
+                        .label("Sistema de extensões não disponível nesta compilação.")
+                        .css_classes(["dim-label"])
+                        .margin_top(48)
+                        .halign(Align::Center)
+                        .build();
+                    fallback.append(&label);
+                    fallback.upcast()
+                };
+                (title, widget)
+            }
+            "brunya://private" => (t!("common.private_window_title"), crate::ui::private_view::build_private_info_view()),
+            "brunya://about" => (t!("common.about"), crate::ui::internal_views::build_about_view()),
+            _ => (t!("app_name"), crate::ui::internal_views::build_about_view()),
         };
 
         widget.set_vexpand(true);
@@ -467,7 +497,7 @@ impl WebView {
             .build();
 
         let desc = Label::builder()
-            .label(&format!("Falha ao conectar a '{}'\n{}", url, error_msg))
+            .label(&format!("{}\n{}", &t!("common.connection_failed_title", url => url), error_msg))
             .css_classes(["dim-label"])
             .justify(gtk4::Justification::Center)
             .build();

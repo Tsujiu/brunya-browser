@@ -14,6 +14,10 @@
   "bookmarks": "Favoritos",
   "add_bookmark": "Adicionar aos Favoritos",
   "history": "Histórico",
+  "history_search_placeholder": "Pesquisar no histórico...",
+  "history_empty": "Nenhum histórico recente registrado.",
+  "bookmarks_empty": "Nenhum favorito salvo ainda. Pressione Ctrl+D para salvar a página atual.",
+  "bookmark_delete": "Excluir favorito",
   "downloads": "Downloads",
   "settings": "Configurações",
   "privacy_shield": "Proteção e Privacidade",
@@ -23,10 +27,13 @@
   "find_in_page": "Localizar na Página",
   "dev_tools": "Ferramentas do Desenvolvedor",
   "private_window": "Nova Janela Privada",
+  "private_window_title": "Janela Privada",
   "about": "Sobre o Brunya",
   "quit": "Sair",
-  "search_logo": "Pesquisa",
+  "search_logo": "Pesquise",
   "search_tagline": "Pesquise qualquer coisa, em qualquer lugar — rápido, privado e moderno.",
   "search_button": "Pesquisar",
-  "search_placeholder_prefix": "Pesquisar no"
+  "search_placeholder_prefix": "Pesquisar no",
+  "not_secure": "Não Seguro (HTTP)",
+  "connection_failed_title": "Falha ao conectar a '{url}'"
 }

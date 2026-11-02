@@ -19,6 +19,7 @@ pub struct BrowserHeader {
     pub shield_black_tex: Option<gdk4::Texture>,
     pub theme_toggle_btn: Button,
     pub downloads_btn: Button,
+    pub extensions_btn: Button,
     pub new_tab_btn: Button,
     pub menu_btn: MenuButton,
 }
@@ -129,6 +130,12 @@ impl BrowserHeader {
             .css_classes(["flat", "circular", "nav-btn"])
             .build();
 
+        let extensions_btn = Button::builder()
+            .icon_name("applications-addons-symbolic")
+            .tooltip_text(&t!("extensions.extensions_title"))
+            .css_classes(["flat", "circular", "nav-btn"])
+            .build();
+
         let theme_toggle_btn = Button::builder()
             .icon_name(if initial_dark { "display-brightness-symbolic" } else { "weather-clear-night-symbolic" })
             .tooltip_text(if initial_dark { "Mudar para tema claro" } else { "Mudar para tema escuro" })
@@ -148,6 +155,7 @@ impl BrowserHeader {
             .build();
 
         right_box.append(&downloads_btn);
+        right_box.append(&extensions_btn);
         right_box.append(&theme_toggle_btn);
         right_box.append(&new_tab_btn);
         right_box.append(&menu_btn);
@@ -168,6 +176,7 @@ impl BrowserHeader {
             shield_black_tex,
             theme_toggle_btn,
             downloads_btn,
+            extensions_btn,
             new_tab_btn,
             menu_btn,
         }

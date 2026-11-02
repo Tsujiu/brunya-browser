@@ -10,6 +10,7 @@ members = [
     "crates/brunya-settings",
     "crates/brunya-diagnostics",
     "crates/brunya-updater",
+    "crates/brunya-extensions",
 ]
 resolver = "2"
 
@@ -61,6 +62,7 @@ brunya-tabs = { path = "crates/brunya-tabs" }
 brunya-settings = { path = "crates/brunya-settings" }
 brunya-diagnostics = { path = "crates/brunya-diagnostics" }
 brunya-updater = { path = "crates/brunya-updater" }
+brunya-extensions = { path = "crates/brunya-extensions" }
 
 # Otimizações de compilação
 [profile.dev]

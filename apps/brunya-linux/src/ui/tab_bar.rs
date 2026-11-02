@@ -1,4 +1,5 @@
 use brunya_core::types::TabId;
+use brunya_i18n::t;
 use brunya_tabs::TabDescriptor;
 use gtk4::prelude::*;
 use gtk4::{
@@ -114,7 +115,7 @@ impl BrowserTabBar {
             };
 
             let display_title = if tab.title.is_empty() {
-                "Nova Aba"
+                &t!("common.new_tab")
             } else {
                 &tab.title
             };

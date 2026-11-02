@@ -14,6 +14,10 @@
   "bookmarks": "Bookmarks",
   "add_bookmark": "Bookmark this tab",
   "history": "History",
+  "history_search_placeholder": "Search history...",
+  "history_empty": "No recent history recorded.",
+  "bookmarks_empty": "No bookmarks yet. Press Ctrl+D to bookmark the current page.",
+  "bookmark_delete": "Delete bookmark",
   "downloads": "Downloads",
   "settings": "Settings",
   "privacy_shield": "Shields & Privacy",
@@ -23,10 +27,13 @@
   "find_in_page": "Find in Page",
   "dev_tools": "Developer Tools",
   "private_window": "New Private Window",
+  "private_window_title": "Private Window",
   "about": "About Brunya",
   "quit": "Quit",
   "search_logo": "Search",
   "search_tagline": "Search anything, anywhere — fast, private, and modern.",
   "search_button": "Search",
-  "search_placeholder_prefix": "Search on"
+  "search_placeholder_prefix": "Search on",
+  "not_secure": "Not Secure (HTTP)",
+  "connection_failed_title": "Failed to connect to '{url}'"
 }
