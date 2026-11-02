@@ -40,33 +40,62 @@ headerbar {
 /* 3. BARRA DE ENDEREÇO (OMNIBOX) REFINADA */
 .address-container {
     background-color: @brunya_card;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 20px;
     padding: 2px 10px;
     margin: 4px 16px;
+    transition: background-color 180ms ease, border-color 180ms ease;
 }
 
 .address-container:hover {
-    border-color: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.16);
     background-color: @brunya_card_hover;
 }
 
 .address-container:focus-within {
     background-color: #1a2028;
-    border-color: @brunya_accent;
+    border-color: rgba(56, 189, 248, 0.40);
+}
+
+/* Eliminar completamente contornos, bordas e sombras internas nos campos de texto */
+entry,
+entry:focus,
+entry:focus-within,
+entry:focus-visible,
+entry text,
+entry text:focus,
+entry text:focus-within,
+entry text:focus-visible,
+.address-entry,
+.address-entry:focus,
+.address-entry:focus-within,
+.address-entry:focus-visible,
+.address-entry text,
+.address-entry text:focus,
+.address-entry text:focus-within,
+.address-entry text:focus-visible,
+.pesquisa-entry,
+.pesquisa-entry:focus,
+.pesquisa-entry:focus-within,
+.pesquisa-entry:focus-visible,
+.pesquisa-entry text,
+.pesquisa-entry text:focus,
+.pesquisa-entry text:focus-within,
+.pesquisa-entry text:focus-visible {
+    border: none;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+    color: @brunya_text;
 }
 
 .address-entry {
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    color: @brunya_text;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-size: 14px;
     padding: 4px 6px;
 }
 
-/* 4. BARRA DE ABAS MODERNA COM ANIMAÇÃO FLUIDA */
+/* 4. BARRA DE ABAS MODERNA COM ANIMAÇÃO FLUIDA E LARGURA RESPONSIVA */
 .tab-bar {
     background-color: #0c0e12;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -80,7 +109,7 @@ headerbar {
     border-bottom: none;
     padding: 5px 8px 5px 10px;
     margin: 0 2px;
-    min-width: 160px;
+    min-width: 44px;
     transition: background-color 220ms ease, border-color 220ms ease, opacity 220ms ease;
 }
 
@@ -143,19 +172,20 @@ headerbar {
 /* Caixa de pesquisa central tipo cápsula */
 .pesquisa-search-container {
     background-color: @brunya_card;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 28px;
     padding: 8px 18px;
+    transition: background-color 180ms ease, border-color 180ms ease;
 }
 
 .pesquisa-search-container:hover {
-    border-color: rgba(255, 255, 255, 0.20);
+    border-color: rgba(255, 255, 255, 0.18);
     background-color: @brunya_card_hover;
 }
 
 .pesquisa-search-container:focus-within {
     background-color: #1a212a;
-    border-color: @brunya_accent;
+    border-color: rgba(56, 189, 248, 0.40);
 }
 
 .engine-picker-btn {

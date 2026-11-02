@@ -21,6 +21,7 @@ pub struct WebView {
     pub webkit_view: WebKitWebView,
     progress_bar: ProgressBar,
     current_state: RefCell<NavigationState>,
+    pub current_favicon: RefCell<Option<gdk4::Texture>>,
     adblock: Arc<AdblockEngine>,
     storage: Arc<StorageManager>,
     settings: Arc<SettingsManager>,
@@ -99,12 +100,25 @@ impl WebView {
             webkit_view: webkit_view.clone(),
             progress_bar: progress_bar.clone(),
             current_state: RefCell::new(initial_state),
+            current_favicon: RefCell::new(None),
             adblock: adblock.clone(),
             storage: storage.clone(),
             settings,
             _is_private: is_private,
             is_loading: AtomicBool::new(false),
-            on_state_changed,
+            on_state_changed: on_state_changed.clone(),
+        });
+
+        // 0. Notificação de Favicon real do site
+        let this_fav = Rc::downgrade(&view);
+        let on_fav_changed = on_state_changed.clone();
+        webkit_view.connect_favicon_notify(move |v| {
+            if let Some(this) = this_fav.upgrade() {
+                let fav = v.favicon();
+                *this.current_favicon.borrow_mut() = fav;
+                let state = this.current_state.borrow().clone();
+                on_fav_changed(&state);
+            }
         });
 
         // 1. Notificação de URI
@@ -230,6 +244,7 @@ impl WebView {
 
         // 2. Alternar entre Páginas Internas nativas do Brunya e Web Real
         if clean_url.starts_with("brunya://") {
+            *self.current_favicon.borrow_mut() = None;
             self.webkit_view.set_visible(false);
             self.internal_area.set_visible(true);
             self.render_internal_page(&clean_url);
