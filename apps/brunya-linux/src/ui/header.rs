@@ -10,11 +10,11 @@ pub struct BrowserHeader {
     pub forward_btn: Button,
     pub reload_btn: Button,
     pub stop_btn: Button,
-    pub security_btn: Button,
     pub address_entry: Entry,
     pub bookmark_btn: Button,
     pub shield_btn: Button,
     pub shield_label: Label,
+    pub theme_toggle_btn: Button,
     pub downloads_btn: Button,
     pub new_tab_btn: Button,
     pub menu_btn: MenuButton,
@@ -56,18 +56,12 @@ impl BrowserHeader {
         nav_box.append(&stop_btn);
         container.pack_start(&nav_box);
 
-        // 2. Barra de Endereço Central com Indicador de Segurança, Favorito e Escudo
+        // 2. Barra de Endereço Central (com Favorito e Escudo Único Oficial à direita)
         let address_box = GtkBox::new(Orientation::Horizontal, 0);
         address_box.set_hexpand(true);
         address_box.set_margin_start(16);
         address_box.set_margin_end(16);
         address_box.add_css_class("linked");
-
-        let security_btn = Button::builder()
-            .icon_name(SecurityLevel::Internal.icon_name())
-            .tooltip_text("Verificar segurança da conexão")
-            .css_classes(["flat"])
-            .build();
 
         let address_entry = Entry::builder()
             .placeholder_text(&t!("common.address_placeholder"))
@@ -80,35 +74,51 @@ impl BrowserHeader {
             .css_classes(["flat"])
             .build();
 
-        // Botão do Escudo de Privacidade com Contador de Rastreadores Bloqueados
+        // Botão Oficial do Escudo de Privacidade com ícone brunya-shield.svg
         let shield_btn = Button::builder()
             .css_classes(["flat"])
             .tooltip_text(&t!("privacy.shield_title"))
             .build();
 
         let shield_content = GtkBox::new(Orientation::Horizontal, 4);
-        let shield_icon = Image::from_icon_name("security-high-symbolic");
+
+        let shield_svg_bytes = glib::Bytes::from_static(include_bytes!("../../../../assets/icons/brunya-shield.svg"));
+        let shield_paintable = gdk4::Texture::from_bytes(&shield_svg_bytes).ok();
+        let shield_icon = if let Some(ref tex) = shield_paintable {
+            let img = Image::from_paintable(Some(tex));
+            img.set_pixel_size(20);
+            img
+        } else {
+            Image::from_icon_name("security-high-symbolic")
+        };
+
         let shield_label = Label::builder()
             .label("0")
-            .css_classes(["numeric", "caption"])
+            .css_classes(["numeric", "caption", "bold"])
             .build();
 
         shield_content.append(&shield_icon);
         shield_content.append(&shield_label);
         shield_btn.set_child(Some(&shield_content));
 
-        address_box.append(&security_btn);
+        // Removido o escudo da esquerda: somente a barra, o favorito e o escudo oficial à direita
         address_box.append(&address_entry);
         address_box.append(&bookmark_btn);
         address_box.append(&shield_btn);
         container.set_title_widget(Some(&address_box));
 
-        // 3. Botões da Direita: Downloads, Nova Aba e Menu Principal
+        // 3. Botões da Direita: Downloads, Alternador de Tema Sol/Lua, Nova Aba e Menu Principal
         let right_box = GtkBox::new(Orientation::Horizontal, 4);
 
         let downloads_btn = Button::builder()
             .icon_name("folder-download-symbolic")
             .tooltip_text(&t!("common.downloads"))
+            .build();
+
+        let theme_toggle_btn = Button::builder()
+            .icon_name("display-brightness-symbolic")
+            .tooltip_text("Alternar modo claro / escuro")
+            .css_classes(["flat"])
             .build();
 
         let new_tab_btn = Button::builder()
@@ -122,6 +132,7 @@ impl BrowserHeader {
             .build();
 
         right_box.append(&downloads_btn);
+        right_box.append(&theme_toggle_btn);
         right_box.append(&new_tab_btn);
         right_box.append(&menu_btn);
         container.pack_end(&right_box);
@@ -132,19 +143,19 @@ impl BrowserHeader {
             forward_btn,
             reload_btn,
             stop_btn,
-            security_btn,
             address_entry,
             bookmark_btn,
             shield_btn,
             shield_label,
+            theme_toggle_btn,
             downloads_btn,
             new_tab_btn,
             menu_btn,
         }
     }
 
-    pub fn set_security_level(&self, level: SecurityLevel) {
-        self.security_btn.set_icon_name(level.icon_name());
+    pub fn set_security_level(&self, _level: SecurityLevel) {
+        // Mantido apenas o escudo oficial à direita
     }
 
     pub fn set_blocked_count(&self, count: u64) {

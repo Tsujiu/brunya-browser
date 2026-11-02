@@ -142,9 +142,12 @@ impl WebView {
         let (title, widget) = match url {
             "brunya://newtab" => {
                 let self_clone = self.clone();
-                ("Nova Aba", crate::ui::internal_views::build_newtab_view(move |target| {
-                    self_clone.load_url(target);
-                }))
+                ("Nova Aba", crate::ui::internal_views::build_newtab_view(
+                    self.settings.clone(),
+                    move |target| {
+                        self_clone.load_url(target);
+                    },
+                ))
             }
             "brunya://settings" => {
                 let self_clone = self.clone();

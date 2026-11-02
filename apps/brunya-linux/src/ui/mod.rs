@@ -5,3 +5,4 @@ pub mod internal_views;
 pub mod find_bar;
 pub mod private_view;
 pub mod site_permissions_popover;
+pub mod engine_popover;
