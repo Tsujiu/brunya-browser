@@ -79,7 +79,7 @@ impl BrowserHeader {
         let bookmark_btn = Button::builder()
             .icon_name("non-starred-symbolic")
             .tooltip_text(&t!("common.add_bookmark"))
-            .css_classes(["flat", "circular", "nav-btn"])
+            .css_classes(["flat", "circular", "omnibox-btn"])
             .build();
 
         // Carregar as duas versões do escudo oficial: branco para modo escuro, preto para modo claro
@@ -90,7 +90,7 @@ impl BrowserHeader {
         let shield_black_tex = gdk4::Texture::from_bytes(&black_bytes).ok();
 
         let shield_btn = Button::builder()
-            .css_classes(["flat", "circular", "nav-btn"])
+            .css_classes(["flat", "circular", "omnibox-btn"])
             .tooltip_text(&t!("privacy.shield_title"))
             .build();
 
@@ -103,7 +103,7 @@ impl BrowserHeader {
 
         let shield_icon = if let Some(tex) = initial_tex {
             let img = Image::from_paintable(Some(tex));
-            img.set_pixel_size(15);
+            img.set_pixel_size(13);
             img
         } else {
             Image::from_icon_name("security-high-symbolic")

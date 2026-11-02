@@ -83,6 +83,19 @@ impl WebView {
             ));
         }
 
+        // Injetar filtros cosméticos nativos do BruNya Shield (Módulos 01 e 05) via UserContentManager
+        if let Some(content_manager) = webkit_view.user_content_manager() {
+            let css = brunya_adblock::CosmeticFilter::default_cosmetic_stylesheet();
+            let user_style = webkit6::UserStyleSheet::new(
+                css,
+                webkit6::UserContentInjectedFrames::AllFrames,
+                webkit6::UserStyleLevel::User,
+                &[],
+                &[],
+            );
+            content_manager.add_style_sheet(&user_style);
+        }
+
         let default_start = if is_private { "brunya://private" } else { "brunya://newtab" };
         let default_title = if is_private { "Janela Privada" } else { "Nova Aba" };
 
@@ -248,10 +261,34 @@ impl WebView {
     }
 
     pub fn load_url(self: &Rc<Self>, url: &str) {
-        let clean_url = url.trim().to_string();
+        let mut clean_url = url.trim().to_string();
         info!("Aba {} navegando para: {}", self.tab_id, clean_url);
 
-        // 1. Interceptação pelo Bloqueador de Anúncios e Rastreadores
+        // 1. Módulo 08 — URL Cleaner (limpeza prévia de parâmetros invasivos de rastreamento)
+        let (cleaned_url, stripped) = brunya_adblock::UrlCleaner::clean_url(&clean_url);
+        if stripped > 0 {
+            clean_url = cleaned_url;
+            self.adblock.stats().record_url_cleaned(stripped);
+            info!("BruNya Shield URL Cleaner removeu {} parâmetros de rastreamento", stripped);
+        }
+
+        // 2. Módulo 03 — Threat Intelligence (detecção de phishing, malware e fraudes)
+        if !clean_url.starts_with("brunya://") && self.adblock.modules_config().malicious_sites {
+            let threat = brunya_adblock::ThreatIntelligence::inspect(&clean_url);
+            if threat.is_threat {
+                let domain = FaviconManager::extract_domain(&clean_url).unwrap_or_default();
+                if !self.adblock.is_site_allowed(&domain) {
+                    self.render_threat_warning_page(
+                        &clean_url,
+                        threat.category.unwrap_or(brunya_adblock::ThreatCategory::Malware),
+                        &threat.reason,
+                    );
+                    return;
+                }
+            }
+        }
+
+        // 3. Interceptação pelo Bloqueador de Anúncios e Rastreadores
         let action = self.adblock.inspect_request(self.tab_id, &clean_url, "main_frame");
         if let brunya_core::traits::RequestAction::Block { reason } = action {
             warn!("Navegação bloqueada pelo Brunya Shield: {} ({})", clean_url, reason);
@@ -259,7 +296,7 @@ impl WebView {
             return;
         }
 
-        // 2. Alternar entre Páginas Internas nativas do Brunya e Web Real
+        // 4. Alternar entre Páginas Internas nativas do Brunya e Web Real
         if clean_url.starts_with("brunya://") {
             *self.current_favicon.borrow_mut() = None;
             self.webkit_view.set_visible(false);
@@ -401,6 +438,93 @@ impl WebView {
         state.url = url.to_string();
         state.title = "Erro de Conexão".to_string();
         state.security_level = SecurityLevel::BrokenTls;
+        state.is_loading = false;
+        (self.on_state_changed)(&state);
+    }
+
+    fn render_threat_warning_page(
+        self: &Rc<Self>,
+        url: &str,
+        category: brunya_adblock::ThreatCategory,
+        reason: &str,
+    ) {
+        self.clear_internal_area();
+        self.webkit_view.set_visible(false);
+        self.internal_area.set_visible(true);
+        self.progress_bar.set_visible(false);
+        self.is_loading.store(false, Ordering::SeqCst);
+
+        let warn_box = GtkBox::new(Orientation::Vertical, 16);
+        warn_box.set_valign(Align::Center);
+        warn_box.set_halign(Align::Center);
+        warn_box.set_margin_top(48);
+        warn_box.set_margin_bottom(48);
+        warn_box.set_margin_start(32);
+        warn_box.set_margin_end(32);
+        warn_box.set_width_request(560);
+
+        let icon = Label::builder()
+            .label("🚨")
+            .css_classes(["display-1"])
+            .build();
+
+        let title = Label::builder()
+            .label("Alerta de Segurança do BruNya Shield")
+            .css_classes(["title-2", "heading", "bold"])
+            .build();
+
+        let desc = Label::builder()
+            .label(&format!(
+                "O BruNya Shield bloqueou o acesso a esta página para proteger seus dados e seu dispositivo.\n\nEndereço: {}\nCategoria: {}\nMotivo: {}",
+                url, category.display_name(), reason
+            ))
+            .wrap(true)
+            .justify(gtk4::Justification::Center)
+            .build();
+
+        let buttons_row = GtkBox::new(Orientation::Horizontal, 12);
+        buttons_row.set_halign(Align::Center);
+
+        let back_btn = Button::builder()
+            .label("Voltar para Segurança (Recomendado)")
+            .css_classes(["suggested-action", "pill"])
+            .build();
+
+        let this_back = self.clone();
+        back_btn.connect_clicked(move |_| {
+            this_back.go_back();
+        });
+
+        let proceed_btn = Button::builder()
+            .label("Continuar mesmo assim (Inseguro)")
+            .css_classes(["flat", "pill", "destructive-action"])
+            .build();
+
+        let this_proceed = self.clone();
+        let target_url = url.to_string();
+        let domain = FaviconManager::extract_domain(url).unwrap_or_default();
+        let ab = self.adblock.clone();
+        proceed_btn.connect_clicked(move |_| {
+            ab.allow_site(&domain);
+            this_proceed.load_url(&target_url);
+        });
+
+        buttons_row.append(&back_btn);
+        buttons_row.append(&proceed_btn);
+
+        warn_box.append(&icon);
+        warn_box.append(&title);
+        warn_box.append(&desc);
+        warn_box.append(&buttons_row);
+        warn_box.set_vexpand(true);
+        warn_box.set_hexpand(true);
+
+        self.internal_area.append(&warn_box);
+
+        let mut state = self.current_state.borrow_mut();
+        state.url = url.to_string();
+        state.title = "Alerta de Segurança".to_string();
+        state.security_level = SecurityLevel::Insecure;
         state.is_loading = false;
         (self.on_state_changed)(&state);
     }

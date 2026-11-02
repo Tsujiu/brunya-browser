@@ -57,6 +57,28 @@ headerbar {
     border-color: rgba(56, 189, 248, 0.40);
 }
 
+/* Botões internos da barra de endereço perfeitamente enquadrados e discretos */
+.omnibox-btn {
+    border-radius: 9999px;
+    padding: 3px 5px;
+    min-width: 24px;
+    min-height: 24px;
+    color: @brunya_text_muted;
+    background-color: transparent;
+    border: none;
+    transition: all 160ms ease;
+    margin: 2px 1px;
+}
+
+.omnibox-btn:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: @brunya_text;
+}
+
+.omnibox-btn:active {
+    transform: scale(0.92);
+}
+
 /* Eliminar completamente contornos, bordas e sombras internas nos campos de texto */
 entry,
 entry:focus,
