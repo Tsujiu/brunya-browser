@@ -203,6 +203,7 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(
         .vscrollbar_policy(gtk4::PolicyType::Automatic)
         .vexpand(true)
         .hexpand(true)
+        .css_classes(["pesquisa-page"])
         .child(&main_box)
         .build();
 

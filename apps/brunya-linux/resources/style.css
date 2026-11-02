@@ -1,12 +1,8 @@
-/* Estilos da Nova Aba inspirados no Pesquisa */
+/* Estilos da Nova Aba inspirados no Pesquisa — Modo Escuro Oficial por Padrão */
 
-.pesquisa-page {
-    background-color: #f4f1ea;
-    color: #1c1917;
-}
-
-window.dark .pesquisa-page,
-.dark .pesquisa-page {
+.pesquisa-page,
+.pesquisa-page viewport,
+.pesquisa-page > viewport {
     background-color: #0f1216;
     color: #e7e5e4;
 }
@@ -16,51 +12,28 @@ window.dark .pesquisa-page,
     font-size: 72px;
     font-weight: 700;
     letter-spacing: -1.5px;
-    color: #1c1917;
-}
-
-window.dark .pesquisa-logo,
-.dark .pesquisa-logo {
     color: #e7e5e4;
 }
 
 .pesquisa-tagline {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-size: 16px;
-    color: #57534e;
+    color: #a8a29e;
     margin-top: 6px;
     margin-bottom: 24px;
 }
 
-window.dark .pesquisa-tagline,
-.dark .pesquisa-tagline {
-    color: #a8a29e;
-}
-
 .pesquisa-search-container {
-    background-color: #fbf9f4;
-    border: 1px solid #d6d0c4;
+    background-color: #171b21;
+    border: 1px solid #292524;
     border-radius: 8px;
     padding: 6px 14px;
-    box-shadow: 0 1px 3px rgba(28, 25, 23, 0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 .pesquisa-search-container:focus-within {
-    border-color: #1e3a5f;
-    box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.25);
-}
-
-window.dark .pesquisa-search-container,
-.dark .pesquisa-search-container {
-    background-color: #171b21;
-    border-color: #292524;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-}
-
-window.dark .pesquisa-search-container:focus-within,
-.dark .pesquisa-search-container:focus-within {
-    border-color: #93c5fd;
-    box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.30);
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
 }
 
 .pesquisa-entry {
@@ -69,69 +42,116 @@ window.dark .pesquisa-search-container:focus-within,
     box-shadow: none;
     font-size: 16px;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    color: #1c1917;
-}
-
-window.dark .pesquisa-entry,
-.dark .pesquisa-entry {
     color: #e7e5e4;
 }
 
+.pesquisa-entry placeholder {
+    color: #78716c;
+}
+
 .pesquisa-btn-primary {
-    background-color: #1e3a5f;
-    color: #f4f1ea;
-    border: 1px solid #1e3a5f;
+    background-color: #1e3a8a;
+    color: #ffffff;
+    border: 1px solid #2563eb;
     border-radius: 6px;
-    padding: 10px 28px;
+    padding: 10px 32px;
     font-size: 15px;
     font-weight: 600;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    box-shadow: 0 1px 2px rgba(28, 25, 23, 0.12);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    transition: all 180ms ease;
 }
 
 .pesquisa-btn-primary:hover {
+    background-color: #2563eb;
+    border-color: #38bdf8;
+    color: #ffffff;
+}
+
+.pesquisa-footer-text {
+    font-size: 13px;
+    color: #a8a29e;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Modo Claro (Ativado apenas quando o usuário clica no alternador de tema) */
+window.light-theme .pesquisa-page,
+window.light-theme .pesquisa-page viewport,
+.pesquisa-light,
+.pesquisa-light viewport {
+    background-color: #f4f1ea;
+    color: #1c1917;
+}
+
+window.light-theme .pesquisa-logo,
+.pesquisa-light .pesquisa-logo {
+    color: #1c1917;
+}
+
+window.light-theme .pesquisa-tagline,
+.pesquisa-light .pesquisa-tagline {
+    color: #57534e;
+}
+
+window.light-theme .pesquisa-search-container,
+.pesquisa-light .pesquisa-search-container {
+    background-color: #fbf9f4;
+    border-color: #d6d0c4;
+    box-shadow: 0 1px 3px rgba(28, 25, 23, 0.08);
+}
+
+window.light-theme .pesquisa-search-container:focus-within,
+.pesquisa-light .pesquisa-search-container:focus-within {
+    border-color: #1e3a5f;
+    box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.25);
+}
+
+window.light-theme .pesquisa-entry,
+.pesquisa-light .pesquisa-entry {
+    color: #1c1917;
+}
+
+window.light-theme .pesquisa-entry placeholder,
+.pesquisa-light .pesquisa-entry placeholder {
+    color: #a8a29e;
+}
+
+window.light-theme .pesquisa-btn-primary,
+.pesquisa-light .pesquisa-btn-primary {
+    background-color: #1e3a5f;
+    color: #f4f1ea;
+    border-color: #1e3a5f;
+}
+
+window.light-theme .pesquisa-btn-primary:hover,
+.pesquisa-light .pesquisa-btn-primary:hover {
     background-color: #1c1917;
     border-color: #1c1917;
     color: #ffffff;
 }
 
-window.dark .pesquisa-btn-primary,
-.dark .pesquisa-btn-primary {
-    background-color: #93c5fd;
-    color: #0f1216;
-    border-color: #93c5fd;
-}
-
-window.dark .pesquisa-btn-primary:hover,
-.dark .pesquisa-btn-primary:hover {
-    background-color: #e7e5e4;
-    border-color: #e7e5e4;
-    color: #0f1216;
-}
-
-.pesquisa-footer-text {
-    font-size: 13px;
+window.light-theme .pesquisa-footer-text,
+.pesquisa-light .pesquisa-footer-text {
     color: #57534e;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-}
-
-window.dark .pesquisa-footer-text,
-.dark .pesquisa-footer-text {
-    color: #a8a29e;
 }
 
 /* Seletor Discreto de Motores de Busca */
 .engine-picker-btn {
     border-radius: 6px;
     padding: 3px 8px;
-    background-color: rgba(128, 128, 128, 0.10);
-    border: 1px solid rgba(128, 128, 128, 0.20);
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     transition: all 180ms ease;
 }
 
 .engine-picker-btn:hover {
-    background-color: rgba(147, 197, 253, 0.20);
-    border-color: #93c5fd;
+    background-color: rgba(56, 189, 248, 0.18);
+    border-color: #38bdf8;
+}
+
+window.light-theme .engine-picker-btn {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.15);
 }
 
 /* Design Moderno e Fluido das Abas */
@@ -145,13 +165,22 @@ window.dark .pesquisa-footer-text,
 }
 
 .tab-pill:hover {
-    background-color: rgba(128, 128, 128, 0.12);
+    background-color: rgba(255, 255, 255, 0.08);
 }
 
 .tab-pill.active {
-    background-color: rgba(128, 128, 128, 0.22);
-    border-color: rgba(147, 197, 253, 0.40);
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(56, 189, 248, 0.35);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.30);
+}
+
+window.light-theme .tab-pill:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+window.light-theme .tab-pill.active {
+    background-color: rgba(0, 0, 0, 0.10);
+    border-color: rgba(30, 58, 95, 0.35);
 }
 
 .tab-select-btn {
