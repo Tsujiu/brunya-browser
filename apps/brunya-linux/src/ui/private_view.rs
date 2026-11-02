@@ -6,6 +6,8 @@ pub fn build_private_info_view() -> gtk4::Widget {
     let container = GtkBox::new(Orientation::Vertical, 16);
     container.set_valign(Align::Center);
     container.set_halign(Align::Center);
+    container.set_vexpand(true);
+    container.set_hexpand(true);
     container.set_margin_top(48);
     container.set_margin_bottom(48);
     container.set_margin_start(32);
@@ -67,6 +69,9 @@ pub fn build_private_info_view() -> gtk4::Widget {
 
     let scroll = ScrolledWindow::builder()
         .hscrollbar_policy(gtk4::PolicyType::Never)
+        .vscrollbar_policy(gtk4::PolicyType::Automatic)
+        .vexpand(true)
+        .hexpand(true)
         .child(&container)
         .build();
 

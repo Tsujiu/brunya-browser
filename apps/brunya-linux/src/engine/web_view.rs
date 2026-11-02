@@ -55,6 +55,8 @@ impl WebView {
         on_state_changed: Rc<dyn Fn(&NavigationState)>,
     ) -> Rc<Self> {
         let container = GtkBox::new(Orientation::Vertical, 0);
+        container.set_vexpand(true);
+        container.set_hexpand(true);
 
         let progress_bar = ProgressBar::builder()
             .fraction(0.0)
@@ -181,6 +183,8 @@ impl WebView {
             _ => ("Página Não Encontrada", crate::ui::internal_views::build_about_view()),
         };
 
+        widget.set_vexpand(true);
+        widget.set_hexpand(true);
         self.content_area.append(&widget);
 
         // Atualizar estado
@@ -356,6 +360,8 @@ impl WebView {
 
         page_box.append(&text_view);
         scroll.set_child(Some(&page_box));
+        scroll.set_vexpand(true);
+        scroll.set_hexpand(true);
         self.content_area.append(&scroll);
 
         // Atualizar estado
@@ -405,6 +411,8 @@ impl WebView {
         err_box.append(&title);
         err_box.append(&desc);
         err_box.append(&reload_btn);
+        err_box.set_vexpand(true);
+        err_box.set_hexpand(true);
 
         self.content_area.append(&err_box);
 
