@@ -1,5 +1,8 @@
 //! Configurações de usuário e preferências de sistema do Brunya Browser.
 
+pub mod search_engines;
+pub use search_engines::*;
+
 use brunya_adblock::ProtectionMode;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
@@ -22,9 +25,9 @@ pub type Result<T> = std::result::Result<T, SettingsError>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ThemePreference {
     #[default]
-    System,
+    Dark, // Modo escuro por padrão!
     Light,
-    Dark,
+    System,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -92,7 +95,7 @@ impl Default for UserSettings {
     fn default() -> Self {
         Self {
             language: "system".to_string(),
-            theme: ThemePreference::System,
+            theme: ThemePreference::Dark, // Modo escuro por padrão
             home_url: "brunya://newtab".to_string(),
             new_tab_url: "brunya://newtab".to_string(),
             search_engine: SearchEngine::default(),
@@ -191,17 +194,17 @@ mod tests {
         let path = temp.path().to_path_buf();
 
         let mgr = SettingsManager::load_or_default(&path);
-        assert_eq!(mgr.get().theme, ThemePreference::System);
+        assert_eq!(mgr.get().theme, ThemePreference::Dark);
 
         mgr.update(|s| {
-            s.theme = ThemePreference::Dark;
+            s.theme = ThemePreference::Light;
             s.tab_suspension_timeout_minutes = 20;
         })
         .unwrap();
 
         // Recarregar de arquivo
         let mgr2 = SettingsManager::load_or_default(&path);
-        assert_eq!(mgr2.get().theme, ThemePreference::Dark);
+        assert_eq!(mgr2.get().theme, ThemePreference::Light);
         assert_eq!(mgr2.get().tab_suspension_timeout_minutes, 20);
     }
 }

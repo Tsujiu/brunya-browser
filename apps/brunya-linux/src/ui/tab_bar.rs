@@ -58,22 +58,15 @@ impl BrowserTabBar {
         for tab in tabs {
             let is_active = Some(tab.id) == active_id;
 
-            let tab_item = GtkBox::new(Orientation::Horizontal, 6);
-            tab_item.set_valign(Align::Center);
-            tab_item.set_margin_start(2);
-            tab_item.set_margin_end(2);
-
-            let mut classes = vec!["tab-button", "flat"];
+            let tab_pill = GtkBox::new(Orientation::Horizontal, 4);
+            tab_pill.set_valign(Align::Center);
+            tab_pill.add_css_class("tab-pill");
             if is_active {
-                classes.push("active-tab");
+                tab_pill.add_css_class("active");
             }
             if tab.is_suspended {
-                classes.push("dim-label");
+                tab_pill.add_css_class("suspended");
             }
-
-            let tab_btn = Button::builder()
-                .css_classes(classes)
-                .build();
 
             // Ícone da aba
             let icon_name = if tab.is_pinned {
@@ -99,31 +92,42 @@ impl BrowserTabBar {
                 .ellipsize(gtk4::pango::EllipsizeMode::End)
                 .build();
 
+            // Botão de Seleção da Aba (Ícone + Título)
+            let select_btn = Button::builder()
+                .css_classes(["flat", "tab-select-btn"])
+                .build();
+
+            let select_content = GtkBox::new(Orientation::Horizontal, 6);
+            select_content.append(&icon);
+            select_content.append(&label);
+            select_btn.set_child(Some(&select_content));
+
+            let tid = tab.id;
+            let switch_cb = on_switch.clone();
+            select_btn.connect_clicked(move |_| {
+                switch_cb(tid);
+            });
+
+            // Botão X de Fechamento Independente (sem aninhamento problemático de botão em botão)
             let close_btn = Button::builder()
                 .icon_name("window-close-symbolic")
-                .css_classes(["flat", "circular"])
+                .css_classes(["flat", "circular", "tab-close-btn"])
                 .tooltip_text("Fechar aba")
                 .build();
 
-            let tid = tab.id;
             let close_cb = on_close.clone();
             close_btn.connect_clicked(move |_| {
                 close_cb(tid);
             });
 
-            let switch_cb = on_switch.clone();
-            tab_btn.connect_clicked(move |_| {
-                switch_cb(tid);
-            });
-
-            // Gesto de Clique Direito (Menu de Contexto de Aba)
+            // Gesto de Clique Direito no Tab Pill para Menu de Contexto
             let right_click = GestureClick::new();
             right_click.set_button(3); // Botão direito do mouse
 
             let dup_cb = on_duplicate.clone();
             let pin_cb = on_pin.clone();
             let close_context_cb = on_close.clone();
-            let tab_btn_anchor = tab_btn.clone();
+            let anchor = tab_pill.clone();
 
             right_click.connect_pressed(move |gesture, _n_press, _x, _y| {
                 gesture.set_state(gtk4::EventSequenceState::Claimed);
@@ -162,19 +166,16 @@ impl BrowserTabBar {
                 menu_box.append(&pin_btn);
                 menu_box.append(&close_action_btn);
                 popover.set_child(Some(&menu_box));
-                popover.set_parent(&tab_btn_anchor);
+                popover.set_parent(&anchor);
                 popover.popup();
             });
 
-            tab_btn.add_controller(right_click);
+            tab_pill.add_controller(right_click);
+            tab_pill.append(&select_btn);
+            tab_pill.append(&close_btn);
 
-            tab_item.append(&icon);
-            tab_item.append(&label);
-            tab_item.append(&close_btn);
-            tab_btn.set_child(Some(&tab_item));
-
-            self.tab_box.append(&tab_btn);
-            self.tab_widgets.insert(tab.id, (tab_item, label, icon));
+            self.tab_box.append(&tab_pill);
+            self.tab_widgets.insert(tab.id, (tab_pill, label, icon));
         }
     }
 }

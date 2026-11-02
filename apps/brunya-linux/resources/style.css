@@ -119,3 +119,65 @@ window.dark .pesquisa-footer-text,
 .dark .pesquisa-footer-text {
     color: #a8a29e;
 }
+
+/* Seletor Discreto de Motores de Busca */
+.engine-picker-btn {
+    border-radius: 6px;
+    padding: 3px 8px;
+    background-color: rgba(128, 128, 128, 0.10);
+    border: 1px solid rgba(128, 128, 128, 0.20);
+    transition: all 180ms ease;
+}
+
+.engine-picker-btn:hover {
+    background-color: rgba(147, 197, 253, 0.20);
+    border-color: #93c5fd;
+}
+
+/* Design Moderno e Fluido das Abas */
+.tab-pill {
+    border-radius: 8px;
+    background-color: transparent;
+    transition: background-color 200ms ease, border-color 200ms ease;
+    padding: 2px 4px 2px 6px;
+    margin: 2px 3px;
+    border: 1px solid transparent;
+}
+
+.tab-pill:hover {
+    background-color: rgba(128, 128, 128, 0.12);
+}
+
+.tab-pill.active {
+    background-color: rgba(128, 128, 128, 0.22);
+    border-color: rgba(147, 197, 253, 0.40);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.30);
+}
+
+.tab-select-btn {
+    border: none;
+    background: transparent;
+    padding: 4px 6px;
+    border-radius: 6px;
+}
+
+/* Botão Fechar Aba Elegante e com Animação Fluida */
+.tab-close-btn {
+    border-radius: 9999px;
+    padding: 3px;
+    min-width: 22px;
+    min-height: 22px;
+    opacity: 0.55;
+    transition: opacity 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.tab-close-btn:hover {
+    opacity: 1.0;
+    background-color: rgba(239, 68, 68, 0.25);
+    color: #ef4444;
+    transform: scale(1.15);
+}
+
+.tab-close-btn:active {
+    transform: scale(0.92);
+}

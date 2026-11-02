@@ -2,7 +2,6 @@ use crate::engine::WebView;
 use crate::ui::find_bar::FindBar;
 use crate::ui::header::BrowserHeader;
 use crate::ui::privacy_popover::PrivacyShieldPopover;
-use crate::ui::site_permissions_popover::SitePermissionsPopover;
 use crate::ui::tab_bar::BrowserTabBar;
 use brunya_adblock::AdblockEngine;
 use brunya_core::types::{TabId, UrlHelper};
@@ -329,21 +328,20 @@ impl BrunyaWindow {
             }
         });
 
-        // 3.1. Botão de Segurança (Abre Diálogo de Permissões e Conexão)
-        let this_sec = self.clone();
-        self.header.security_btn.connect_clicked(move |btn| {
-            let active = this_sec.tab_manager.active_tab();
-            let url = active.as_ref().map(|t| t.url.as_str()).unwrap_or("brunya://newtab");
-            let is_secure = url.starts_with("https://") || url.starts_with("brunya://");
-            let origin = if let Ok(parsed) = url::Url::parse(url) {
-                format!("{}://{}", parsed.scheme(), parsed.host_str().unwrap_or(""))
+        // 3.1. Alternador de Tema Claro / Escuro (Sol / Lua)
+        let this_theme = self.clone();
+        self.header.theme_toggle_btn.connect_clicked(move |btn| {
+            let style_mgr = libadwaita::StyleManager::default();
+            let is_dark = style_mgr.is_dark();
+            if is_dark {
+                style_mgr.set_color_scheme(libadwaita::ColorScheme::ForceLight);
+                btn.set_icon_name("weather-clear-night-symbolic");
+                this_theme.settings_manager.update(|s| s.theme = brunya_settings::ThemePreference::Light).ok();
             } else {
-                url.to_string()
-            };
-
-            let popover = SitePermissionsPopover::new(this_sec.storage_manager.clone(), origin, is_secure);
-            popover.popover.set_parent(btn);
-            popover.popover.popup();
+                style_mgr.set_color_scheme(libadwaita::ColorScheme::ForceDark);
+                btn.set_icon_name("display-brightness-symbolic");
+                this_theme.settings_manager.update(|s| s.theme = brunya_settings::ThemePreference::Dark).ok();
+            }
         });
 
         // 4. Botão Recarregar

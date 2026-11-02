@@ -13,7 +13,10 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 /// Constrói a página interna "brunya://newtab" inspirada no buscador Pesquisa.
-pub fn build_newtab_view<F: Fn(&str) + 'static>(on_navigate: F) -> gtk4::Widget {
+pub fn build_newtab_view<F: Fn(&str) + 'static>(
+    settings_mgr: Arc<SettingsManager>,
+    on_navigate: F,
+) -> gtk4::Widget {
     let main_box = GtkBox::new(Orientation::Vertical, 0);
     main_box.set_vexpand(true);
     main_box.set_hexpand(true);
@@ -30,10 +33,10 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(on_navigate: F) -> gtk4::Widget 
     hero.set_margin_top(48);
     hero.set_margin_bottom(32);
 
-    // 1. Logo "Pesquisa." com a mesma fonte serifada e ponto estilizado
+    // 1. Logo "Pesquisa." com a mesma fonte serifada e ponto estilizado em azul
     let logo = Label::builder()
         .use_markup(true)
-        .label("<span font_family=\"Fraunces, Georgia, DejaVu Serif, serif\" size=\"56000\" weight=\"bold\">Pesquisa<span foreground=\"#1e3a5f\">.</span></span>")
+        .label("<span font_family=\"Fraunces, Georgia, DejaVu Serif, serif\" size=\"56000\" weight=\"bold\">Pesquisa<span foreground=\"#93c5fd\">.</span></span>")
         .css_classes(["pesquisa-logo"])
         .build();
 
@@ -48,20 +51,67 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(on_navigate: F) -> gtk4::Widget 
     hero.append(&logo);
     hero.append(&tagline);
 
-    // 3. Search Box Wrapper estilizado
-    let search_box = GtkBox::new(Orientation::Horizontal, 10);
+    // 3. Search Box Wrapper estilizado com Seletor Discreto de Motores de Busca
+    let search_box = GtkBox::new(Orientation::Horizontal, 8);
     search_box.set_halign(Align::Center);
-    search_box.set_width_request(580);
+    search_box.set_width_request(600);
     search_box.add_css_class("pesquisa-search-container");
 
     let search_icon = Image::from_icon_name("system-search-symbolic");
     search_icon.set_opacity(0.6);
+
+    // Motor de busca ativo
+    let current_engine = settings_mgr.get().search_engine;
+    let selected_template = Rc::new(RefCell::new(current_engine.query_template));
+
+    let engine_btn = Button::builder()
+        .css_classes(["flat", "pill", "engine-picker-btn"])
+        .tooltip_text("Selecionar motor de busca")
+        .build();
+
+    let engine_content = GtkBox::new(Orientation::Horizontal, 4);
+    let engine_glyph = Label::builder()
+        .label("🦆")
+        .css_classes(["caption", "bold"])
+        .build();
+    let engine_arrow = Image::from_icon_name("pan-down-symbolic");
+    engine_arrow.set_pixel_size(10);
+
+    engine_content.append(&engine_glyph);
+    engine_content.append(&engine_arrow);
+    engine_btn.set_child(Some(&engine_content));
 
     let search_entry = Entry::builder()
         .placeholder_text("Pesquisar no Pesquisa...")
         .hexpand(true)
         .css_classes(["pesquisa-entry"])
         .build();
+
+    let engine_glyph_clone = engine_glyph.clone();
+    let entry_for_ph = search_entry.clone();
+    let template_store = selected_template.clone();
+    let sm_clone = settings_mgr.clone();
+
+    engine_btn.connect_clicked(move |btn| {
+        let g_clone = engine_glyph_clone.clone();
+        let entry_c = entry_for_ph.clone();
+        let tmpl_c = template_store.clone();
+        let sm_c = sm_clone.clone();
+
+        let popover = crate::ui::engine_popover::SearchEnginePopover::new(move |engine| {
+            g_clone.set_label(engine.glyph);
+            entry_c.set_placeholder_text(Some(&format!("Pesquisar no {}...", engine.name)));
+            *tmpl_c.borrow_mut() = engine.query_template.to_string();
+            sm_c.update(|s| {
+                s.search_engine = brunya_settings::SearchEngine {
+                    name: engine.name.to_string(),
+                    query_template: engine.query_template.to_string(),
+                };
+            }).ok();
+        });
+        popover.popover.set_parent(btn);
+        popover.popover.popup();
+    });
 
     let clear_btn = Button::builder()
         .icon_name("edit-clear-symbolic")
@@ -82,6 +132,7 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(on_navigate: F) -> gtk4::Widget 
     });
 
     search_box.append(&search_icon);
+    search_box.append(&engine_btn);
     search_box.append(&search_entry);
     search_box.append(&clear_btn);
     hero.append(&search_box);
@@ -99,18 +150,24 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(on_navigate: F) -> gtk4::Widget 
     let on_nav_clone = Rc::new(on_navigate);
     let nav_click = on_nav_clone.clone();
     let entry_clone = search_entry.clone();
+    let tmpl_for_click = selected_template.clone();
     search_btn.connect_clicked(move |_| {
-        let text = entry_clone.text();
+        let text = entry_clone.text().trim().to_string();
         if !text.is_empty() {
-            nav_click(text.as_str());
+            let tmpl = tmpl_for_click.borrow().clone();
+            let target = brunya_core::types::UrlHelper::parse_input(&text, &tmpl);
+            nav_click(&target);
         }
     });
 
     let nav_enter = on_nav_clone.clone();
+    let tmpl_for_enter = selected_template.clone();
     search_entry.connect_activate(move |entry| {
-        let text = entry.text();
+        let text = entry.text().trim().to_string();
         if !text.is_empty() {
-            nav_enter(text.as_str());
+            let tmpl = tmpl_for_enter.borrow().clone();
+            let target = brunya_core::types::UrlHelper::parse_input(&text, &tmpl);
+            nav_enter(&target);
         }
     });
 
