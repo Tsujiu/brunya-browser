@@ -440,22 +440,8 @@ impl WebView {
         }
     }
 
-    pub fn calculate_ram_mb(&self, url: &str, total_tabs: usize) -> u64 {
-        if url.starts_with("brunya://") {
-            18
-        } else {
-            let child_avg = brunya_diagnostics::get_tab_memory_mb(false, total_tabs);
-            if url.contains("fast.com") || url.contains("speedtest.net") {
-                (child_avg + 25).max(85)
-            } else if url.contains("youtube.com") || url.contains("netflix.com") {
-                (child_avg + 45).max(110)
-            } else if url.contains("google.com") || url.contains("bing.com") {
-                (child_avg + 10).max(65)
-            } else if url.contains("startpage.com") || url.contains("duckduckgo.com") {
-                child_avg.max(52)
-            } else {
-                child_avg.max(45)
-            }
-        }
+    pub fn calculate_ram_mb(&self, tab_index: usize, url: &str) -> u64 {
+        let is_internal = url.starts_with("brunya://");
+        brunya_diagnostics::get_distinct_tab_memory_mb(tab_index, url, is_internal)
     }
 }

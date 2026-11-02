@@ -119,7 +119,7 @@ impl BrowserTabBar {
                 &tab.title
             };
 
-            // Tooltip informativo com consumo de RAM específico de CADA aba (visível mesmo em abas inativas)
+            // Tooltip informativo com consumo de RAM específico de CADA aba (aparece SOMENTE ao passar o mouse sobre o ícone)
             let is_internal = tab.url.starts_with("brunya://");
             let ram_mb = ram_usages.get(&tab.id).copied().unwrap_or(tab.memory_usage_mb);
             let ram_tooltip = if is_internal {
@@ -129,7 +129,7 @@ impl BrowserTabBar {
                 format!("{} — Consumo de RAM: {} MB", domain, ram_mb)
             };
 
-            tab_pill.set_tooltip_text(Some(&ram_tooltip));
+            // Somente o ícone da aba recebe o tooltip com o consumo de RAM
             icon.set_tooltip_text(Some(&ram_tooltip));
 
             let show_label = target_width >= 70;
@@ -144,27 +144,16 @@ impl BrowserTabBar {
                 .visible(show_label)
                 .build();
 
-            // Badge com consumo de RAM visível diretamente na aba
-            let ram_badge = Label::builder()
-                .label(&format!("{} MB", ram_mb))
-                .css_classes(["tab-ram-badge"])
-                .valign(Align::Center)
-                .visible(target_width >= 110)
-                .tooltip_text(&ram_tooltip)
-                .build();
-
-            // Botão de Seleção da Aba (Ícone + Título + Badge de RAM com hexpand para empurrar o X para o final)
+            // Botão de Seleção da Aba (Ícone + Título com hexpand para empurrar o X para o final)
             let select_btn = Button::builder()
                 .css_classes(["flat", "tab-select-btn"])
                 .hexpand(true)
-                .tooltip_text(&ram_tooltip)
                 .build();
 
             let select_content = GtkBox::new(Orientation::Horizontal, 6);
             select_content.set_hexpand(true);
             select_content.append(&icon);
             select_content.append(&label);
-            select_content.append(&ram_badge);
             select_btn.set_child(Some(&select_content));
 
             let tid = tab.id;

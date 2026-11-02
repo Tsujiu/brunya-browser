@@ -195,7 +195,6 @@ impl BrunyaWindow {
         let active_id = self.tab_manager.active_tab().map(|t| t.id);
 
         let views = self.tab_views.borrow();
-        let total_tabs = tabs.len();
 
         let favicons: HashMap<TabId, Option<gdk4::Texture>> = views
             .iter()
@@ -204,9 +203,10 @@ impl BrunyaWindow {
 
         let ram_usages: HashMap<TabId, u64> = tabs
             .iter()
-            .map(|tab| {
+            .enumerate()
+            .map(|(idx, tab)| {
                 let ram = if let Some(view) = views.get(&tab.id) {
-                    view.calculate_ram_mb(&tab.url, total_tabs)
+                    view.calculate_ram_mb(idx, &tab.url)
                 } else {
                     tab.memory_usage_mb
                 };
@@ -243,9 +243,9 @@ impl BrunyaWindow {
     }
 
     fn on_active_tab_state_changed(self: &Rc<Self>, tab_id: TabId, state: &brunya_core::types::NavigationState) {
-        let total_tabs = self.tab_manager.list_tabs().len();
+        let tab_idx = self.tab_manager.list_tabs().iter().position(|t| t.id == tab_id).unwrap_or(0);
         let ram_mb = if let Some(view) = self.tab_views.borrow().get(&tab_id) {
-            view.calculate_ram_mb(&state.url, total_tabs)
+            view.calculate_ram_mb(tab_idx, &state.url)
         } else {
             18
         };
