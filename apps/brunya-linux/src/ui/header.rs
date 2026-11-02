@@ -33,23 +33,27 @@ impl BrowserHeader {
         let back_btn = Button::builder()
             .icon_name("go-previous-symbolic")
             .tooltip_text(&t!("common.back"))
+            .css_classes(["flat", "circular", "nav-btn"])
             .sensitive(false)
             .build();
 
         let forward_btn = Button::builder()
             .icon_name("go-next-symbolic")
             .tooltip_text(&t!("common.forward"))
+            .css_classes(["flat", "circular", "nav-btn"])
             .sensitive(false)
             .build();
 
         let reload_btn = Button::builder()
             .icon_name("view-refresh-symbolic")
             .tooltip_text(&t!("common.reload"))
+            .css_classes(["flat", "circular", "nav-btn"])
             .build();
 
         let stop_btn = Button::builder()
             .icon_name("process-stop-symbolic")
             .tooltip_text(&t!("common.stop"))
+            .css_classes(["flat", "circular", "nav-btn"])
             .visible(false)
             .build();
 
@@ -60,21 +64,22 @@ impl BrowserHeader {
         container.pack_start(&nav_box);
 
         // 2. Barra de Endereço Central (com Favorito e Escudo Único Oficial à direita)
-        let address_box = GtkBox::new(Orientation::Horizontal, 0);
+        let address_box = GtkBox::new(Orientation::Horizontal, 4);
         address_box.set_hexpand(true);
         address_box.set_margin_start(16);
         address_box.set_margin_end(16);
-        address_box.add_css_class("linked");
+        address_box.add_css_class("address-container");
 
         let address_entry = Entry::builder()
             .placeholder_text(&t!("common.address_placeholder"))
             .hexpand(true)
+            .css_classes(["address-entry"])
             .build();
 
         let bookmark_btn = Button::builder()
             .icon_name("non-starred-symbolic")
             .tooltip_text(&t!("common.add_bookmark"))
-            .css_classes(["flat"])
+            .css_classes(["flat", "circular", "nav-btn"])
             .build();
 
         // Carregar as duas versões do escudo oficial: branco para modo escuro, preto para modo claro
@@ -85,11 +90,11 @@ impl BrowserHeader {
         let shield_black_tex = gdk4::Texture::from_bytes(&black_bytes).ok();
 
         let shield_btn = Button::builder()
-            .css_classes(["flat"])
+            .css_classes(["flat", "shield-chip"])
             .tooltip_text(&t!("privacy.shield_title"))
             .build();
 
-        let shield_content = GtkBox::new(Orientation::Horizontal, 4);
+        let shield_content = GtkBox::new(Orientation::Horizontal, 6);
 
         let initial_dark = libadwaita::StyleManager::default().is_dark();
         let initial_tex = if initial_dark {
@@ -100,7 +105,7 @@ impl BrowserHeader {
 
         let shield_icon = if let Some(tex) = initial_tex {
             let img = Image::from_paintable(Some(tex));
-            img.set_pixel_size(20);
+            img.set_pixel_size(18);
             img
         } else {
             Image::from_icon_name("security-high-symbolic")
@@ -127,22 +132,25 @@ impl BrowserHeader {
         let downloads_btn = Button::builder()
             .icon_name("folder-download-symbolic")
             .tooltip_text(&t!("common.downloads"))
+            .css_classes(["flat", "circular", "nav-btn"])
             .build();
 
         let theme_toggle_btn = Button::builder()
             .icon_name(if initial_dark { "display-brightness-symbolic" } else { "weather-clear-night-symbolic" })
             .tooltip_text(if initial_dark { "Mudar para tema claro" } else { "Mudar para tema escuro" })
-            .css_classes(["flat", "circular"])
+            .css_classes(["flat", "circular", "nav-btn"])
             .build();
 
         let new_tab_btn = Button::builder()
             .icon_name("tab-new-symbolic")
             .tooltip_text(&t!("common.new_tab"))
+            .css_classes(["flat", "circular", "nav-btn"])
             .build();
 
         let menu_btn = MenuButton::builder()
             .icon_name("open-menu-symbolic")
             .tooltip_text("Menu do Brunya")
+            .css_classes(["flat", "circular", "nav-btn"])
             .build();
 
         right_box.append(&downloads_btn);
