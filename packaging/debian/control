@@ -4,7 +4,7 @@ Section: web
 Priority: optional
 Architecture: amd64
 Maintainer: Brunya Browser Team <142347573+Tsujiu@users.noreply.github.com>
-Depends: libgtk-4-1 (>= 4.14.0), libadwaita-1-0 (>= 1.5.0), libsqlite3-0 (>= 3.45.0), libc6 (>= 2.38)
+Depends: libgtk-4-1 (>= 4.14.0), libadwaita-1-0 (>= 1.5.0), libwebkitgtk-6.0-4 (>= 2.42.0), libsqlite3-0 (>= 3.45.0), libc6 (>= 2.38)
 Homepage: https://brunyabrowser.org
 Description: Navegador web rápido, leve e privado para Linux
  O Brunya Browser é um navegador desktop moderno projetado em Rust
