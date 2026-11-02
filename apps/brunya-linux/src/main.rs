@@ -64,10 +64,11 @@ fn main() -> glib::ExitCode {
     let mut initial_urls = Vec::new();
     let args: Vec<String> = env::args().collect();
     for arg in args.iter().skip(1) {
-        if arg.starts_with('-') {
+        let trimmed = arg.trim();
+        if trimmed.starts_with('-') || trimmed == "%U" || trimmed == "%u" || trimmed.is_empty() {
             continue;
         }
-        initial_urls.push(arg.clone());
+        initial_urls.push(trimmed.to_string());
     }
 
     info!("Iniciando Brunya Browser no Linux...");

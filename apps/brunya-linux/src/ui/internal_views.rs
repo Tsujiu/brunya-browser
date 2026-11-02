@@ -3,7 +3,7 @@ use brunya_settings::{SettingsManager, ThemePreference};
 use brunya_storage::StorageManager;
 use gtk4::prelude::*;
 use gtk4::{
-    Align, Box as GtkBox, Button, Entry, Label, ListBox, Orientation,
+    Align, Box as GtkBox, Button, Entry, Image, Label, ListBox, Orientation,
     ScrolledWindow, SelectionMode,
 };
 use libadwaita::prelude::*;
@@ -14,13 +14,21 @@ use std::sync::Arc;
 
 /// Constrói a página interna "brunya://newtab" (Nova Aba com atalhos e busca limpa).
 pub fn build_newtab_view<F: Fn(&str) + 'static>(on_navigate: F) -> gtk4::Widget {
-    let container = GtkBox::new(Orientation::Vertical, 24);
+    let container = GtkBox::new(Orientation::Vertical, 16);
     container.set_valign(Align::Center);
     container.set_halign(Align::Center);
-    container.set_margin_top(48);
-    container.set_margin_bottom(48);
+    container.set_vexpand(true);
+    container.set_hexpand(true);
+    container.set_margin_top(32);
+    container.set_margin_bottom(32);
     container.set_margin_start(24);
     container.set_margin_end(24);
+
+    let logo = Image::builder()
+        .icon_name("web-browser-symbolic")
+        .pixel_size(72)
+        .css_classes(["accent"])
+        .build();
 
     let title = Label::builder()
         .label("Brunya Browser")
@@ -32,20 +40,23 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(on_navigate: F) -> gtk4::Widget 
         .css_classes(["title-4", "dim-label"])
         .build();
 
+    container.append(&logo);
     container.append(&title);
     container.append(&subtitle);
 
     let search_box = GtkBox::new(Orientation::Horizontal, 8);
     search_box.set_halign(Align::Center);
+    search_box.set_margin_top(12);
 
     let search_entry = Entry::builder()
         .placeholder_text(&t!("common.address_placeholder"))
-        .width_request(450)
+        .width_request(480)
         .build();
 
     let search_btn = Button::builder()
         .icon_name("system-search-symbolic")
         .css_classes(["suggested-action"])
+        .tooltip_text("Pesquisar")
         .build();
 
     let on_nav_clone = Rc::new(on_navigate);
@@ -70,7 +81,7 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(on_navigate: F) -> gtk4::Widget 
     search_box.append(&search_btn);
     container.append(&search_box);
 
-    let shortcuts_box = GtkBox::new(Orientation::Horizontal, 16);
+    let shortcuts_box = GtkBox::new(Orientation::Horizontal, 12);
     shortcuts_box.set_halign(Align::Center);
     shortcuts_box.set_margin_top(16);
 
@@ -99,6 +110,9 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(on_navigate: F) -> gtk4::Widget 
 
     let scroll = ScrolledWindow::builder()
         .hscrollbar_policy(gtk4::PolicyType::Never)
+        .vscrollbar_policy(gtk4::PolicyType::Automatic)
+        .vexpand(true)
+        .hexpand(true)
         .child(&container)
         .build();
 
@@ -270,6 +284,8 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     priv_group.add(&dns_row);
     page.add(&priv_group);
 
+    page.set_vexpand(true);
+    page.set_hexpand(true);
     page.upcast()
 }
 
@@ -279,6 +295,8 @@ pub fn build_history_view<F: Fn(&str) + 'static>(
     on_navigate: F,
 ) -> gtk4::Widget {
     let container = GtkBox::new(Orientation::Vertical, 16);
+    container.set_vexpand(true);
+    container.set_hexpand(true);
     container.set_margin_top(24);
     container.set_margin_bottom(24);
     container.set_margin_start(32);
@@ -365,6 +383,9 @@ pub fn build_history_view<F: Fn(&str) + 'static>(
 
     let scroll = ScrolledWindow::builder()
         .hscrollbar_policy(gtk4::PolicyType::Never)
+        .vscrollbar_policy(gtk4::PolicyType::Automatic)
+        .vexpand(true)
+        .hexpand(true)
         .child(&container)
         .build();
 
@@ -374,6 +395,8 @@ pub fn build_history_view<F: Fn(&str) + 'static>(
 /// Constrói a página interna "brunya://downloads".
 pub fn build_downloads_view(storage_mgr: Arc<StorageManager>) -> gtk4::Widget {
     let container = GtkBox::new(Orientation::Vertical, 16);
+    container.set_vexpand(true);
+    container.set_hexpand(true);
     container.set_margin_top(24);
     container.set_margin_bottom(24);
     container.set_margin_start(32);
@@ -468,6 +491,9 @@ pub fn build_downloads_view(storage_mgr: Arc<StorageManager>) -> gtk4::Widget {
 
     let scroll = ScrolledWindow::builder()
         .hscrollbar_policy(gtk4::PolicyType::Never)
+        .vscrollbar_policy(gtk4::PolicyType::Automatic)
+        .vexpand(true)
+        .hexpand(true)
         .child(&container)
         .build();
 
@@ -480,6 +506,8 @@ pub fn build_bookmarks_view<F: Fn(&str) + 'static>(
     on_navigate: F,
 ) -> gtk4::Widget {
     let container = GtkBox::new(Orientation::Vertical, 16);
+    container.set_vexpand(true);
+    container.set_hexpand(true);
     container.set_margin_top(24);
     container.set_margin_bottom(24);
     container.set_margin_start(32);
@@ -549,6 +577,9 @@ pub fn build_bookmarks_view<F: Fn(&str) + 'static>(
 
     let scroll = ScrolledWindow::builder()
         .hscrollbar_policy(gtk4::PolicyType::Never)
+        .vscrollbar_policy(gtk4::PolicyType::Automatic)
+        .vexpand(true)
+        .hexpand(true)
         .child(&container)
         .build();
 
@@ -560,6 +591,8 @@ pub fn build_about_view() -> gtk4::Widget {
     let container = GtkBox::new(Orientation::Vertical, 16);
     container.set_valign(Align::Center);
     container.set_halign(Align::Center);
+    container.set_vexpand(true);
+    container.set_hexpand(true);
     container.set_margin_top(48);
     container.set_margin_bottom(48);
 
@@ -596,6 +629,9 @@ pub fn build_about_view() -> gtk4::Widget {
 
     let scroll = ScrolledWindow::builder()
         .hscrollbar_policy(gtk4::PolicyType::Never)
+        .vscrollbar_policy(gtk4::PolicyType::Automatic)
+        .vexpand(true)
+        .hexpand(true)
         .child(&container)
         .build();
 

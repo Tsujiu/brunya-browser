@@ -169,14 +169,15 @@ impl BrunyaWindow {
             let tab_name = format!("tab_{}", tab_id.0);
             self.tab_stack.set_visible_child_name(&tab_name);
 
-            // Atualizar barra de abas
-            self.refresh_tab_bar();
-
-            // Atualizar barra de navegação com o estado desta aba
+            // Garantir que o widget ativo seja o visível e receba o foco
             if let Some(view) = self.tab_views.borrow().get(&tab_id) {
+                self.tab_stack.set_visible_child(&view.container);
                 let st = view.navigation_state();
                 self.sync_header_with_state(&st);
             }
+
+            // Atualizar barra de abas
+            self.refresh_tab_bar();
         }
     }
 
