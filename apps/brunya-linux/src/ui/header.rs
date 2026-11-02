@@ -103,7 +103,7 @@ impl BrowserHeader {
 
         let shield_icon = if let Some(tex) = initial_tex {
             let img = Image::from_paintable(Some(tex));
-            img.set_pixel_size(13);
+            img.set_pixel_size(15);
             img
         } else {
             Image::from_icon_name("security-high-symbolic")
