@@ -148,12 +148,20 @@ impl AdblockEngine {
         if let Ok(rules_val) = serde_json::from_str::<serde_json::Value>(include_str!("../resources/adblock_rules.json")) {
             if let Some(arr) = rules_val.as_array() {
                 for item in arr {
+                    // Importar apenas regras de ação 'block' (regras cosméticas css-display-none não bloqueiam URLs)
+                    if item.get("action").and_then(|a| a.get("type")).and_then(|t| t.as_str()) != Some("block") {
+                        continue;
+                    }
                     if let Some(trigger) = item.get("trigger") {
                         if let Some(pattern) = trigger.get("url-filter").and_then(|u| u.as_str()) {
-                            let clean_p = pattern.trim_matches('.').trim_matches('*');
-                            if !clean_p.is_empty() {
-                                let rule_str = format!("||{}^", clean_p.replace("\\.", "."));
+                            let clean_p = pattern.replace(".*", "").replace("\\.", ".");
+                            if !clean_p.is_empty() && !clean_p.contains('/') {
+                                let rule_str = format!("||{}^", clean_p);
                                 if let Some(parsed) = ParsedRule::parse(&rule_str) {
+                                    rules.push(parsed);
+                                }
+                            } else if !clean_p.is_empty() {
+                                if let Some(parsed) = ParsedRule::parse(&clean_p) {
                                     rules.push(parsed);
                                 }
                             }
@@ -218,13 +226,24 @@ impl AdblockEngine {
             }
         }
 
-        // 4. Módulo 10 — Bloqueio de Anúncios em Vídeo
+        // 4. Módulo 10 — Bloqueio de Anúncios em Vídeo e YouTube Ads
         if modules.video_ads {
-            if url_lower.contains("googleads.g.doubleclick.net/pagead/ads?client=ca-video")
+            if url_lower.contains("ads.youtube.com")
+                || url_lower.contains("ad.youtube.com")
+                || url_lower.contains("s.youtube.com/api/stats/ads")
+                || url_lower.contains("youtube.com/pagead/")
+                || url_lower.contains("youtube.com/api/stats/ads")
+                || url_lower.contains("youtube.com/api/stats/playback")
+                || url_lower.contains("youtube.com/api/stats/qoe")
+                || url_lower.contains("youtube.com/get_midroll_info")
+                || url_lower.contains("youtube.com/youtubei/v1/player/ad_break")
+                || url_lower.contains("youtube.com/ptracking")
+                || url_lower.contains("video-ad-stats.googlevideo.com")
+                || url_lower.contains("googleads.g.doubleclick.net/pagead/ads?client=ca-video")
                 || url_lower.contains("imasdk.googleapis.com")
                 || url_lower.contains("video-ad-tracker")
             {
-                self.record_block(tab_id, raw_url, "VideoAds: Bloqueado anúncio em stream de vídeo");
+                self.record_block(tab_id, raw_url, "VideoAds: Bloqueado anúncio/rastreador do YouTube");
                 return true;
             }
         }
@@ -293,5 +312,23 @@ impl NetworkInterceptor for AdblockEngine {
         } else {
             RequestAction::Allow
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_adblock_engine_full() {
+        let engine = AdblockEngine::new();
+        let tab = TabId(1);
+
+        assert!(engine.should_block(tab, "https://doubleclick.net/ad.js", None, None));
+        assert!(engine.should_block(tab, "https://google-analytics.com/analytics.js", None, None));
+        assert!(engine.should_block(tab, "https://ads.youtube.com/api/stats/ads", None, None));
+        assert!(engine.should_block(tab, "https://ad.youtube.com/pagead", None, None));
+        assert!(!engine.should_block(tab, "https://youtube.com/watch?v=123", None, None));
+        assert!(!engine.should_block(tab, "https://kernel.org/", None, None));
     }
 }
