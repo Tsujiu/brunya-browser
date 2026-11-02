@@ -12,51 +12,88 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-/// Constrói a página interna "brunya://newtab" (Nova Aba com atalhos e busca limpa).
+/// Constrói a página interna "brunya://newtab" inspirada no buscador Pesquisa.
 pub fn build_newtab_view<F: Fn(&str) + 'static>(on_navigate: F) -> gtk4::Widget {
-    let container = GtkBox::new(Orientation::Vertical, 16);
-    container.set_valign(Align::Center);
-    container.set_halign(Align::Center);
-    container.set_vexpand(true);
-    container.set_hexpand(true);
-    container.set_margin_top(32);
-    container.set_margin_bottom(32);
-    container.set_margin_start(24);
-    container.set_margin_end(24);
+    let main_box = GtkBox::new(Orientation::Vertical, 0);
+    main_box.set_vexpand(true);
+    main_box.set_hexpand(true);
+    main_box.add_css_class("pesquisa-page");
 
-    let logo = Image::builder()
-        .icon_name("web-browser-symbolic")
-        .pixel_size(72)
-        .css_classes(["accent"])
+    // Container centralizado (Hero section)
+    let hero = GtkBox::new(Orientation::Vertical, 16);
+    hero.set_valign(Align::Center);
+    hero.set_halign(Align::Center);
+    hero.set_vexpand(true);
+    hero.set_hexpand(true);
+    hero.set_margin_start(24);
+    hero.set_margin_end(24);
+    hero.set_margin_top(48);
+    hero.set_margin_bottom(32);
+
+    // 1. Logo "Pesquisa." com a mesma fonte serifada e ponto estilizado
+    let logo = Label::builder()
+        .use_markup(true)
+        .label("<span font_family=\"Fraunces, Georgia, DejaVu Serif, serif\" size=\"56000\" weight=\"bold\">Pesquisa<span foreground=\"#1e3a5f\">.</span></span>")
+        .css_classes(["pesquisa-logo"])
         .build();
 
-    let title = Label::builder()
-        .label("Brunya Browser")
-        .css_classes(["title-1", "heading"])
+    // 2. Tagline
+    let tagline = Label::builder()
+        .label("Pesquise qualquer coisa, em qualquer lugar — rápido, privado e moderno.")
+        .css_classes(["pesquisa-tagline"])
+        .wrap(true)
+        .justify(gtk4::Justification::Center)
         .build();
 
-    let subtitle = Label::builder()
-        .label(&t!("common.app_tagline"))
-        .css_classes(["title-4", "dim-label"])
-        .build();
+    hero.append(&logo);
+    hero.append(&tagline);
 
-    container.append(&logo);
-    container.append(&title);
-    container.append(&subtitle);
-
-    let search_box = GtkBox::new(Orientation::Horizontal, 8);
+    // 3. Search Box Wrapper estilizado
+    let search_box = GtkBox::new(Orientation::Horizontal, 10);
     search_box.set_halign(Align::Center);
-    search_box.set_margin_top(12);
+    search_box.set_width_request(580);
+    search_box.add_css_class("pesquisa-search-container");
+
+    let search_icon = Image::from_icon_name("system-search-symbolic");
+    search_icon.set_opacity(0.6);
 
     let search_entry = Entry::builder()
-        .placeholder_text(&t!("common.address_placeholder"))
-        .width_request(480)
+        .placeholder_text("Pesquisar no Pesquisa...")
+        .hexpand(true)
+        .css_classes(["pesquisa-entry"])
         .build();
 
+    let clear_btn = Button::builder()
+        .icon_name("edit-clear-symbolic")
+        .css_classes(["flat", "circular"])
+        .tooltip_text("Limpar busca")
+        .visible(false)
+        .build();
+
+    let entry_for_clear = search_entry.clone();
+    let clear_btn_clone = clear_btn.clone();
+    search_entry.connect_changed(move |e| {
+        clear_btn_clone.set_visible(!e.text().is_empty());
+    });
+
+    clear_btn.connect_clicked(move |_| {
+        entry_for_clear.set_text("");
+        entry_for_clear.grab_focus();
+    });
+
+    search_box.append(&search_icon);
+    search_box.append(&search_entry);
+    search_box.append(&clear_btn);
+    hero.append(&search_box);
+
+    // 4. Botão de Pesquisar
+    let buttons_box = GtkBox::new(Orientation::Horizontal, 10);
+    buttons_box.set_halign(Align::Center);
+    buttons_box.set_margin_top(16);
+
     let search_btn = Button::builder()
-        .icon_name("system-search-symbolic")
-        .css_classes(["suggested-action"])
-        .tooltip_text("Pesquisar")
+        .label("Pesquisar")
+        .css_classes(["pesquisa-btn-primary"])
         .build();
 
     let on_nav_clone = Rc::new(on_navigate);
@@ -77,43 +114,39 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(on_navigate: F) -> gtk4::Widget 
         }
     });
 
-    search_box.append(&search_entry);
-    search_box.append(&search_btn);
-    container.append(&search_box);
+    buttons_box.append(&search_btn);
+    hero.append(&buttons_box);
 
-    let shortcuts_box = GtkBox::new(Orientation::Horizontal, 12);
-    shortcuts_box.set_halign(Align::Center);
-    shortcuts_box.set_margin_top(16);
+    // 5. Rodapé discreto com dica de teclado
+    let footer_box = GtkBox::new(Orientation::Vertical, 4);
+    footer_box.set_halign(Align::Center);
+    footer_box.set_valign(Align::End);
+    footer_box.set_margin_bottom(20);
 
-    let shortcuts = [
-        ("Linux Mint", "https://linuxmint.com"),
-        ("Ubuntu", "https://ubuntu.com"),
-        ("Kernel.org", "https://kernel.org"),
-        ("DuckDuckGo", "https://duckduckgo.com"),
-        ("Wikipedia", "https://pt.wikipedia.org"),
-    ];
+    let footer_label = Label::builder()
+        .label("Pesquisa · Buscador moderno em Português")
+        .css_classes(["pesquisa-footer-text"])
+        .opacity(0.85)
+        .build();
 
-    for (name, url) in shortcuts {
-        let btn = Button::builder()
-            .label(name)
-            .css_classes(["flat", "pill"])
-            .build();
-        let target = url.to_string();
-        let nav_shortcut = on_nav_clone.clone();
-        btn.connect_clicked(move |_| {
-            nav_shortcut(&target);
-        });
-        shortcuts_box.append(&btn);
-    }
+    let hint_label = Label::builder()
+        .label("Dica: pressione Enter para pesquisar")
+        .css_classes(["pesquisa-footer-text", "caption"])
+        .opacity(0.65)
+        .build();
 
-    container.append(&shortcuts_box);
+    footer_box.append(&footer_label);
+    footer_box.append(&hint_label);
+
+    main_box.append(&hero);
+    main_box.append(&footer_box);
 
     let scroll = ScrolledWindow::builder()
         .hscrollbar_policy(gtk4::PolicyType::Never)
         .vscrollbar_policy(gtk4::PolicyType::Automatic)
         .vexpand(true)
         .hexpand(true)
-        .child(&container)
+        .child(&main_box)
         .build();
 
     scroll.upcast()

@@ -73,6 +73,17 @@ impl BrunyaApp {
         let sm = self.settings_manager.clone();
 
         self.app.connect_startup(move |_| {
+            // Carregar estilos personalizados da aplicação
+            let css_provider = gtk4::CssProvider::new();
+            css_provider.load_from_string(include_str!("../resources/style.css"));
+            if let Some(display) = gdk4::Display::default() {
+                gtk4::style_context_add_provider_for_display(
+                    &display,
+                    &css_provider,
+                    gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+                );
+            }
+
             // Aplicar tema quando GTK/Adwaita estiver inicializado
             let theme = sm.get().theme;
             let style_mgr = libadwaita::StyleManager::default();
