@@ -1,5 +1,11 @@
 //! Diagnósticos de desempenho e medição precisa de recursos do sistema para o Brunya Browser.
 
+pub mod memory_pressure;
+pub mod cpu_features;
+
+pub use memory_pressure::{MemoryPressureLevel, SystemMemorySnapshot};
+pub use cpu_features::CpuCapabilities;
+
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::time::Instant;

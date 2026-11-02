@@ -1,11 +1,21 @@
 //! Gerenciamento de abas e política inteligente de suspensão de memória do Brunya Browser.
 
 use brunya_core::types::TabId;
+use brunya_diagnostics::MemoryPressureLevel;
 use chrono::{DateTime, Duration, Utc};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use tracing::info;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiscardedTabState {
+    pub tab_id: TabId,
+    pub url: String,
+    pub title: String,
+    pub favicon_url: Option<String>,
+    pub discarded_at: DateTime<Utc>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TabDescriptor {
@@ -45,6 +55,7 @@ pub struct TabManager {
     tabs: RwLock<Vec<TabDescriptor>>,
     active_tab_id: RwLock<Option<TabId>>,
     closed_history: RwLock<VecDeque<TabDescriptor>>,
+    discarded_states: RwLock<HashMap<TabId, DiscardedTabState>>,
     max_closed_history: usize,
 }
 
@@ -54,6 +65,7 @@ impl TabManager {
             tabs: RwLock::new(Vec::new()),
             active_tab_id: RwLock::new(None),
             closed_history: RwLock::new(VecDeque::new()),
+            discarded_states: RwLock::new(HashMap::new()),
             max_closed_history: 25,
         }
     }
@@ -165,11 +177,44 @@ impl TabManager {
             if tab.can_be_suspended() && (now - tab.last_active_at) > idle_timeout {
                 tab.is_suspended = true;
                 suspended.push(tab.id);
+                self.discarded_states.write().insert(
+                    tab.id,
+                    DiscardedTabState {
+                        tab_id: tab.id,
+                        url: tab.url.clone(),
+                        title: tab.title.clone(),
+                        favicon_url: tab.favicon_url.clone(),
+                        discarded_at: now,
+                    },
+                );
                 info!("Aba {} colocada em suspensão inteligente de memória", tab.id);
             }
         }
 
         suspended
+    }
+
+    /// Suspensão adaptativa orientada pelo nível de pressão de memória física do sistema.
+    pub fn suspend_under_memory_pressure(&self, pressure: MemoryPressureLevel, base_timeout: Duration) -> Vec<TabId> {
+        match pressure {
+            MemoryPressureLevel::Critical => {
+                // Sob pressão crítica (< 10% RAM livre), descarta todas as abas inativas imediatamente!
+                info!("ALERTA DE PRESSÃO CRÍTICA: Descarte emergencial de abas inativas acionado");
+                self.suspend_inactive_tabs(Duration::zero())
+            }
+            MemoryPressureLevel::Moderate => {
+                // Sob pressão moderada (10% a 20%), reduz o tempo de inatividade em 75%
+                let reduced_timeout = base_timeout / 4;
+                self.suspend_inactive_tabs(reduced_timeout)
+            }
+            MemoryPressureLevel::Normal => {
+                self.suspend_inactive_tabs(base_timeout)
+            }
+        }
+    }
+
+    pub fn get_discarded_state(&self, tab_id: TabId) -> Option<DiscardedTabState> {
+        self.discarded_states.read().get(&tab_id).cloned()
     }
 }
 
@@ -222,5 +267,24 @@ mod tests {
         mgr.set_active_tab(t1.id);
         let tab = mgr.active_tab().unwrap();
         assert!(!tab.is_suspended);
+    }
+
+    #[test]
+    fn test_critical_memory_pressure_suspension() {
+        let mgr = TabManager::new();
+        let t1 = mgr.open_tab("https://docs.rs", "Docs");
+        let t2 = mgr.open_tab("https://kernel.org", "Kernel");
+        let _active = mgr.open_tab("https://linuxmint.com", "Active Tab");
+
+        // Sob pressão crítica, abas inativas (mesmo com 0s de inatividade) devem ser descartadas
+        let suspended = mgr.suspend_under_memory_pressure(MemoryPressureLevel::Critical, Duration::minutes(15));
+        assert_eq!(suspended.len(), 2);
+        assert!(suspended.contains(&t1.id));
+        assert!(suspended.contains(&t2.id));
+
+        // Verificar que o estado descartado foi retido para restauração
+        let state1 = mgr.get_discarded_state(t1.id).unwrap();
+        assert_eq!(state1.url, "https://docs.rs");
+        assert_eq!(state1.title, "Docs");
     }
 }

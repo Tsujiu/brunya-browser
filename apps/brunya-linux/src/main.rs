@@ -1,6 +1,7 @@
 //! Brunya Browser — Ponto de Entrada Principal para Linux.
 
 pub mod app;
+pub mod benchmark;
 pub mod engine;
 pub mod ui;
 pub mod window;
@@ -41,6 +42,7 @@ fn main() -> glib::ExitCode {
                 println!("  -h, --help            Exibe esta ajuda");
                 println!("  --check-sandbox       Verifica o suporte ao sandbox do kernel Linux");
                 println!("  --benchmark           Mede tempo de inicialização e memória RSS");
+                println!("  --benchmark-full      Executa suíte de benchmark completa de desempenho e abas");
                 return glib::ExitCode::SUCCESS;
             }
             "--check-sandbox" => {
@@ -49,6 +51,10 @@ fn main() -> glib::ExitCode {
             }
             "--benchmark" => {
                 run_cli_benchmark();
+                return glib::ExitCode::SUCCESS;
+            }
+            "--benchmark-full" => {
+                benchmark::run_full_benchmark();
                 return glib::ExitCode::SUCCESS;
             }
             _ => {}

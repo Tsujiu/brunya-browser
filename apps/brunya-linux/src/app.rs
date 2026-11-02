@@ -1,5 +1,6 @@
 use crate::window::BrunyaWindow;
 use brunya_adblock::AdblockEngine;
+use brunya_diagnostics::{MemoryPressureLevel, SystemMemorySnapshot};
 use brunya_i18n::{t, I18nManager, Language};
 use brunya_settings::{SettingsManager, ThemePreference};
 use brunya_storage::StorageManager;
@@ -217,18 +218,29 @@ impl BrunyaApp {
         self.app.add_action(&action_about);
     }
 
-    /// Timer de economia inteligente de memória: a cada 60s inspeciona abas inativas
+    /// Monitor inteligente de memória e CPU: inspeciona periodicamente a pressão física de RAM
+    /// e aplica descarte adaptativo e throttling em abas em segundo plano.
     fn setup_memory_saver_timer(self: &Rc<Self>) {
         let tm = self.tab_manager.clone();
         let sm = self.settings_manager.clone();
 
-        glib::timeout_add_seconds_local(60, move || {
+        glib::timeout_add_seconds_local(30, move || {
             let cfg = sm.get();
             if cfg.tab_suspension_enabled && cfg.tab_suspension_timeout_minutes > 0 {
                 let dur = Duration::minutes(cfg.tab_suspension_timeout_minutes as i64);
-                let suspended = tm.suspend_inactive_tabs(dur);
+                let snapshot = SystemMemorySnapshot::current();
+                let pressure = snapshot
+                    .as_ref()
+                    .map(|s| s.pressure_level)
+                    .unwrap_or(MemoryPressureLevel::Normal);
+
+                let suspended = tm.suspend_under_memory_pressure(pressure, dur);
                 if !suspended.is_empty() {
-                    info!("Brunya Economizador de Memória: {} abas suspensas", suspended.len());
+                    info!(
+                        "Brunya Economizador de Memória: {} abas suspensas (Nível de Pressão: {:?})",
+                        suspended.len(),
+                        pressure
+                    );
                 }
             }
             glib::ControlFlow::Continue

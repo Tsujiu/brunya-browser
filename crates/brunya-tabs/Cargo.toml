@@ -8,6 +8,7 @@ description = "Gerenciador inteligente de abas e suspensão de memória do Bruny
 
 [dependencies]
 brunya-core.workspace = true
+brunya-diagnostics.workspace = true
 chrono.workspace = true
 serde.workspace = true
 serde_json.workspace = true
