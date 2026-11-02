@@ -227,6 +227,7 @@ name = "brunya-tabs"
 version = "0.3.0"
 dependencies = [
  "brunya-core",
+ "brunya-diagnostics",
  "chrono",
  "parking_lot",
  "serde",

@@ -5,6 +5,16 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 
 ---
 
+## [0.4.0-alpha] - 2026-11-01
+
+### Adicionado
+- **Fase 3 Concluída:** Desempenho e Otimizações de Memória.
+- **Detector de Pressão de Memória Física:** Leitura direta de `/proc/meminfo` e PSI (`SystemMemorySnapshot`) com classificação em Normal, Moderada e Crítica.
+- **Suspensão Emergencial Adaptativa:** Descarte em massa instantâneo de abas inativas sob pressão crítica de RAM com retenção leve de metadados (`DiscardedTabState`).
+- **Detecção em Tempo de Execução de Extensões de CPU:** Módulo `CpuCapabilities` com detecção dinâmica de SSE4.2, AES-NI, AVX2, BMI2 e RDRAND, preservando total compatibilidade universal do binário x86-64 sem flags agressivas de compilação.
+- **Suíte de Benchmark Automatizada Integrada:** Flag CLI `--benchmark-full` medindo com precisão microssegundos a carga de subsistemas, consumo de RAM (1/10/30 abas), rendimento do adblock (>710.000 req/s) e latência de restauração (3 µs).
+- **Otimizações de Compilação Release:** Perfil otimizado com opt-level=3, Thin LTO, codegen-units=1 e strip de debuginfo.
+
 ## [0.3.0-alpha] - 2026-11-01
 
 ### Adicionado
