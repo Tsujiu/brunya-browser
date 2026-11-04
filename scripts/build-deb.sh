@@ -66,7 +66,7 @@ Upstream-Name: Brunya Browser
 Source: https://github.com/Tsujiu/brunya-browser
 
 Files: *
-Copyright: 2026 Brunya Browser Team <142347573+Tsujiu@users.noreply.github.com>
+Copyright: 2026 Brunya Browser Team
 License: LicenseRef-Brunya-All-Rights-Reserved
  Código público para consulta. Todos os direitos reservados.
  A minuta está em LICENSE, na raiz do código-fonte upstream.
@@ -112,7 +112,7 @@ Verifica os recursos de sandbox e isolamento no kernel Linux.
 \fB\-\-benchmark\-full\fR
 Executa a suíte de testes de desempenho de inicialização e memória.
 .SH AUTHOR
-Brunya Browser Team <142347573+Tsujiu@users.noreply.github.com>
+Brunya Browser Team
 EOF
 chmod 644 "$STAGING_DIR/usr/share/man/man1/brunya-browser.1.gz"
 

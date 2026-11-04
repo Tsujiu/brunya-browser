@@ -17,7 +17,7 @@ resolver = "2"
 [workspace.package]
 version = "0.3.0"
 edition = "2021"
-authors = ["Brunya Browser Team <142347573+Tsujiu@users.noreply.github.com>"]
+authors = ["Brunya Browser Team"]
 license = "LicenseRef-Brunya-All-Rights-Reserved"
 repository = "https://github.com/Tsujiu/brunya-browser"
 homepage = "https://brunyabrowser.org"

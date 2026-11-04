@@ -6,8 +6,7 @@ GitHub é evidência do que o colaborador declarou. Não é, sozinho, uma
 cessão de direitos patrimoniais na forma que a lei brasileira costuma
 exigir para esse ato.
 
-Titular do projeto, para esta minuta: Brunya Browser Team
-<142347573+Tsujiu@users.noreply.github.com>.
+Titular do projeto, para esta minuta: Brunya Browser Team.
 
 1. Alternativas
 

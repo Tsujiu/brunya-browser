@@ -1,10 +1,9 @@
 AVISOS DE TITULARIDADE E DE TERCEIROS
 Brunya Browser — NOTICE
 
-O código original deste repositório é do Brunya Browser Team
-<142347573+Tsujiu@users.noreply.github.com>, com todos os direitos reservados,
-conforme a minuta em LICENSE. Este arquivo não concede permissões além
-dessa minuta.
+O código original deste repositório é do Brunya Browser Team, com todos
+os direitos reservados, conforme a minuta em LICENSE. Este arquivo não
+concede permissões além dessa minuta.
 
 Identificações feitas na auditoria de 2026-11-02. Não é uma lista
 exaustiva de toda dependência transitiva. As licenças das crates estão
@@ -53,5 +52,5 @@ ainda visível no histórico, pode ser invocado por quem clonar um commit
 antigo.
 
 Os três commits mais antigos foram assinados como BEAR Browser Core
-Team <142347573+Tsujiu@users.noreply.github.com>. O histórico posterior usa Brunya
-Browser Core Team. Não há outro autor identificado na linha do Git.
+Team. O histórico posterior usa Brunya Browser Core Team. Não há outro
+autor identificado na linha do Git.

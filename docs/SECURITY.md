@@ -20,8 +20,7 @@ O Brunya Browser adota o modelo de segurança multi-nível do ecossistema Chromi
 
 Caso você encontre uma vulnerabilidade de segurança no Brunya Browser, por favor **NÃO** abra uma issue pública.
 
-Envie um relatório detalhado para:
-`142347573+Tsujiu@users.noreply.github.com`
+O caminho de reporte está em [SECURITY.md](../SECURITY.md).
 
 Inclua no relatório:
 - Versão exata do Brunya Browser e distribuição Linux utilizada.

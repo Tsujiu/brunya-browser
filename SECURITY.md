@@ -3,7 +3,11 @@
 Não abra issue pública para vulnerabilidade. Uma issue pública mostra o
 defeito antes de existir correção.
 
-Envie o relato para `142347573+Tsujiu@users.noreply.github.com` com:
+Abra um aviso privado no GitHub:
+
+https://github.com/Tsujiu/brunya-browser/security/advisories/new
+
+Inclua:
 
 - commit ou versão do Brunya e o sistema em que ocorreu;
 - o que é preciso fazer para repetir o problema;
