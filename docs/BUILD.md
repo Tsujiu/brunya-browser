@@ -27,6 +27,9 @@ sudo apt install -y \
     pkg-config \
     libgtk-4-dev \
     libadwaita-1-dev \
+    libsoup-3.0-dev \
+    libjavascriptcoregtk-6.0-dev \
+    libwebkitgtk-6.0-dev \
     libsqlite3-dev \
     curl \
     git
