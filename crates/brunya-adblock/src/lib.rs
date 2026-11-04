@@ -230,23 +230,22 @@ impl AdblockEngine {
         }
 
         // 3. Módulo 07 — Anti-Crypto Mining
-        if modules.anti_crypto_mining {
-            if url_lower.contains("coinhive")
+        if modules.anti_crypto_mining
+            && (url_lower.contains("coinhive")
                 || url_lower.contains("cryptonight")
-                || url_lower.contains("miner.monero")
-            {
-                self.record_block(
-                    tab_id,
-                    raw_url,
-                    "Anti-CryptoMining: Bloqueado script de mineração",
-                );
-                return true;
-            }
+                || url_lower.contains("miner.monero"))
+        {
+            self.record_block(
+                tab_id,
+                raw_url,
+                "Anti-CryptoMining: Bloqueado script de mineração",
+            );
+            return true;
         }
 
         // 4. Módulo 10 — Bloqueio de Anúncios em Vídeo e YouTube Ads
-        if modules.video_ads {
-            if url_lower.contains("ads.youtube.com")
+        if modules.video_ads
+            && (url_lower.contains("ads.youtube.com")
                 || url_lower.contains("ad.youtube.com")
                 || url_lower.contains("s.youtube.com/api/stats/ads")
                 || url_lower.contains("youtube.com/pagead/")
@@ -259,15 +258,14 @@ impl AdblockEngine {
                 || url_lower.contains("video-ad-stats.googlevideo.com")
                 || url_lower.contains("googleads.g.doubleclick.net/pagead/ads?client=ca-video")
                 || url_lower.contains("imasdk.googleapis.com")
-                || url_lower.contains("video-ad-tracker")
-            {
-                self.record_block(
-                    tab_id,
-                    raw_url,
-                    "VideoAds: Bloqueado anúncio/rastreador do YouTube",
-                );
-                return true;
-            }
+                || url_lower.contains("video-ad-tracker"))
+        {
+            self.record_block(
+                tab_id,
+                raw_url,
+                "VideoAds: Bloqueado anúncio/rastreador do YouTube",
+            );
+            return true;
         }
 
         let rules = self.rules.read();

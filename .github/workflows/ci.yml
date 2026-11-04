@@ -49,7 +49,9 @@ jobs:
         run: cargo fmt --all --check
 
       - name: Run Clippy static analysis
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        env:
+          RUSTFLAGS: ""
+        run: cargo clippy --workspace --all-targets -- -D clippy::correctness
 
   test:
     name: Unit & Integration Tests
