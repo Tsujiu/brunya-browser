@@ -21,7 +21,9 @@ pub enum UpdateError {
     #[error("Manifesto de atualização expirado em {expires_at}! Possível ataque de congelamento de metadados")]
     ManifestExpired { expires_at: DateTime<Utc> },
 
-    #[error("Falha de integridade criptográfica! Hash SHA-256 esperado: {expected}, obtido: {actual}")]
+    #[error(
+        "Falha de integridade criptográfica! Hash SHA-256 esperado: {expected}, obtido: {actual}"
+    )]
     ChecksumMismatch { expected: String, actual: String },
 
     #[error("Artefato não compatível com a arquitetura do sistema: {target_arch}")]
@@ -74,7 +76,10 @@ impl UpdateVerifier {
 
         // 1. Proteção contra ataque de congelamento (Freeze attack / replay)
         if now > manifest.expires_at {
-            warn!("Manifesto de atualização expirou em {}", manifest.expires_at);
+            warn!(
+                "Manifesto de atualização expirou em {}",
+                manifest.expires_at
+            );
             return Err(UpdateError::ManifestExpired {
                 expires_at: manifest.expires_at,
             });
@@ -190,7 +195,10 @@ impl UpdateManager {
         file.write_all(bytes)?;
         file.sync_all()?;
 
-        info!("Artefato '{}' verificado e gravado com sucesso.", artifact.name);
+        info!(
+            "Artefato '{}' verificado e gravado com sucesso.",
+            artifact.name
+        );
         Ok(())
     }
 }
@@ -212,8 +220,10 @@ mod tests {
             artifacts: vec![UpdateArtifact {
                 name: "brunya-browser_0.4.0_amd64.deb".to_string(),
                 architecture: "amd64".to_string(),
-                url: "https://releases.brunyabrowser.org/brunya-browser_0.4.0_amd64.deb".to_string(),
-                sha256_checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".to_string(),
+                url: "https://releases.brunyabrowser.org/brunya-browser_0.4.0_amd64.deb"
+                    .to_string(),
+                sha256_checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                    .to_string(),
                 size_bytes: 2500000,
             }],
         };
@@ -264,7 +274,8 @@ mod tests {
             name: "package.deb".to_string(),
             architecture: "amd64".to_string(),
             url: "https://example.com".to_string(),
-            sha256_checksum: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".to_string(),
+            sha256_checksum: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                .to_string(),
             size_bytes: 100,
         };
 

@@ -44,12 +44,24 @@ impl CpuCapabilities {
 
     pub fn summary_string(&self) -> String {
         let mut feats = Vec::new();
-        if self.has_sse4_2 { feats.push("SSE4.2"); }
-        if self.has_aes_ni { feats.push("AES-NI"); }
-        if self.has_avx2 { feats.push("AVX2"); }
-        if self.has_avx512 { feats.push("AVX-512"); }
-        if self.has_bmi2 { feats.push("BMI2"); }
-        if self.has_rdrand { feats.push("RDRAND"); }
+        if self.has_sse4_2 {
+            feats.push("SSE4.2");
+        }
+        if self.has_aes_ni {
+            feats.push("AES-NI");
+        }
+        if self.has_avx2 {
+            feats.push("AVX2");
+        }
+        if self.has_avx512 {
+            feats.push("AVX-512");
+        }
+        if self.has_bmi2 {
+            feats.push("BMI2");
+        }
+        if self.has_rdrand {
+            feats.push("RDRAND");
+        }
 
         if feats.is_empty() {
             format!("{} (Conjunto x86-64 Base)", self.architecture)

@@ -84,7 +84,7 @@ impl TabManager {
         let mut tabs = self.tabs.write();
         if let Some(pos) = tabs.iter().position(|t| t.id == tab_id) {
             let removed = tabs.remove(pos);
-            
+
             // Guardar para restauração (Ctrl+Shift+T)
             let mut closed = self.closed_history.write();
             if closed.len() >= self.max_closed_history {
@@ -96,7 +96,11 @@ impl TabManager {
             let mut active = self.active_tab_id.write();
             if *active == Some(tab_id) {
                 if !tabs.is_empty() {
-                    let next_pos = if pos >= tabs.len() { tabs.len() - 1 } else { pos };
+                    let next_pos = if pos >= tabs.len() {
+                        tabs.len() - 1
+                    } else {
+                        pos
+                    };
                     *active = Some(tabs[next_pos].id);
                     tabs[next_pos].last_active_at = Utc::now();
                 } else {
@@ -140,7 +144,14 @@ impl TabManager {
         Some(restored)
     }
 
-    pub fn update_tab_metadata(&self, tab_id: TabId, url: &str, title: &str, favicon: Option<String>, memory_mb: u64) {
+    pub fn update_tab_metadata(
+        &self,
+        tab_id: TabId,
+        url: &str,
+        title: &str,
+        favicon: Option<String>,
+        memory_mb: u64,
+    ) {
         let mut tabs = self.tabs.write();
         if let Some(tab) = tabs.iter_mut().find(|t| t.id == tab_id) {
             tab.url = url.to_string();
@@ -192,7 +203,10 @@ impl TabManager {
                         discarded_at: now,
                     },
                 );
-                info!("Aba {} colocada em suspensão inteligente de memória", tab.id);
+                info!(
+                    "Aba {} colocada em suspensão inteligente de memória",
+                    tab.id
+                );
             }
         }
 
@@ -200,7 +214,11 @@ impl TabManager {
     }
 
     /// Suspensão adaptativa orientada pelo nível de pressão de memória física do sistema.
-    pub fn suspend_under_memory_pressure(&self, pressure: MemoryPressureLevel, base_timeout: Duration) -> Vec<TabId> {
+    pub fn suspend_under_memory_pressure(
+        &self,
+        pressure: MemoryPressureLevel,
+        base_timeout: Duration,
+    ) -> Vec<TabId> {
         match pressure {
             MemoryPressureLevel::Critical => {
                 // Sob pressão crítica (< 10% RAM livre), descarta todas as abas inativas imediatamente!
@@ -212,9 +230,7 @@ impl TabManager {
                 let reduced_timeout = base_timeout / 4;
                 self.suspend_inactive_tabs(reduced_timeout)
             }
-            MemoryPressureLevel::Normal => {
-                self.suspend_inactive_tabs(base_timeout)
-            }
+            MemoryPressureLevel::Normal => self.suspend_inactive_tabs(base_timeout),
         }
     }
 
@@ -282,7 +298,8 @@ mod tests {
         let _active = mgr.open_tab("https://linuxmint.com", "Active Tab");
 
         // Sob pressão crítica, abas inativas (mesmo com 0s de inatividade) devem ser descartadas
-        let suspended = mgr.suspend_under_memory_pressure(MemoryPressureLevel::Critical, Duration::minutes(15));
+        let suspended =
+            mgr.suspend_under_memory_pressure(MemoryPressureLevel::Critical, Duration::minutes(15));
         assert_eq!(suspended.len(), 2);
         assert!(suspended.contains(&t1.id));
         assert!(suspended.contains(&t2.id));

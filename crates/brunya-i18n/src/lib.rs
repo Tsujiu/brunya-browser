@@ -83,21 +83,69 @@ impl I18nManager {
 
     fn load_embedded(&mut self) {
         let mut pt_br_map = HashMap::new();
-        Self::merge_json(&mut pt_br_map, "common", include_str!("../../../locales/pt-BR/common.json"));
-        Self::merge_json(&mut pt_br_map, "settings", include_str!("../../../locales/pt-BR/settings.json"));
-        Self::merge_json(&mut pt_br_map, "privacy", include_str!("../../../locales/pt-BR/privacy.json"));
-        Self::merge_json(&mut pt_br_map, "errors", include_str!("../../../locales/pt-BR/errors.json"));
-        Self::merge_json(&mut pt_br_map, "downloads", include_str!("../../../locales/pt-BR/downloads.json"));
-        Self::merge_json(&mut pt_br_map, "extensions", include_str!("../../../locales/pt-BR/extensions.json"));
+        Self::merge_json(
+            &mut pt_br_map,
+            "common",
+            include_str!("../../../locales/pt-BR/common.json"),
+        );
+        Self::merge_json(
+            &mut pt_br_map,
+            "settings",
+            include_str!("../../../locales/pt-BR/settings.json"),
+        );
+        Self::merge_json(
+            &mut pt_br_map,
+            "privacy",
+            include_str!("../../../locales/pt-BR/privacy.json"),
+        );
+        Self::merge_json(
+            &mut pt_br_map,
+            "errors",
+            include_str!("../../../locales/pt-BR/errors.json"),
+        );
+        Self::merge_json(
+            &mut pt_br_map,
+            "downloads",
+            include_str!("../../../locales/pt-BR/downloads.json"),
+        );
+        Self::merge_json(
+            &mut pt_br_map,
+            "extensions",
+            include_str!("../../../locales/pt-BR/extensions.json"),
+        );
         self.catalogues.insert(Language::PtBr, pt_br_map);
 
         let mut en_map = HashMap::new();
-        Self::merge_json(&mut en_map, "common", include_str!("../../../locales/en/common.json"));
-        Self::merge_json(&mut en_map, "settings", include_str!("../../../locales/en/settings.json"));
-        Self::merge_json(&mut en_map, "privacy", include_str!("../../../locales/en/privacy.json"));
-        Self::merge_json(&mut en_map, "errors", include_str!("../../../locales/en/errors.json"));
-        Self::merge_json(&mut en_map, "downloads", include_str!("../../../locales/en/downloads.json"));
-        Self::merge_json(&mut en_map, "extensions", include_str!("../../../locales/en/extensions.json"));
+        Self::merge_json(
+            &mut en_map,
+            "common",
+            include_str!("../../../locales/en/common.json"),
+        );
+        Self::merge_json(
+            &mut en_map,
+            "settings",
+            include_str!("../../../locales/en/settings.json"),
+        );
+        Self::merge_json(
+            &mut en_map,
+            "privacy",
+            include_str!("../../../locales/en/privacy.json"),
+        );
+        Self::merge_json(
+            &mut en_map,
+            "errors",
+            include_str!("../../../locales/en/errors.json"),
+        );
+        Self::merge_json(
+            &mut en_map,
+            "downloads",
+            include_str!("../../../locales/en/downloads.json"),
+        );
+        Self::merge_json(
+            &mut en_map,
+            "extensions",
+            include_str!("../../../locales/en/extensions.json"),
+        );
         self.catalogues.insert(Language::En, en_map);
     }
 
@@ -111,13 +159,16 @@ impl I18nManager {
 
     pub fn translate(&self, key: &str, vars: &[(&str, &str)]) -> String {
         let current = self.current_language();
-        
+
         // 1. Tentar idioma atual
-        let template = self.catalogues.get(&current)
+        let template = self
+            .catalogues
+            .get(&current)
             .and_then(|cat| cat.get(key))
             // 2. Fallback obrigatório para pt-BR
             .or_else(|| {
-                self.catalogues.get(&Language::PtBr)
+                self.catalogues
+                    .get(&Language::PtBr)
                     .and_then(|cat| cat.get(key))
             });
 
@@ -136,7 +187,8 @@ impl I18nManager {
     }
 
     pub fn all_keys_for(&self, lang: Language) -> Vec<String> {
-        self.catalogues.get(&lang)
+        self.catalogues
+            .get(&lang)
             .map(|c| c.keys().cloned().collect())
             .unwrap_or_default()
     }
@@ -181,8 +233,10 @@ mod tests {
     #[test]
     fn test_catalogues_parity() {
         let i18n = I18nManager::global();
-        let pt_keys: std::collections::HashSet<_> = i18n.all_keys_for(Language::PtBr).into_iter().collect();
-        let en_keys: std::collections::HashSet<_> = i18n.all_keys_for(Language::En).into_iter().collect();
+        let pt_keys: std::collections::HashSet<_> =
+            i18n.all_keys_for(Language::PtBr).into_iter().collect();
+        let en_keys: std::collections::HashSet<_> =
+            i18n.all_keys_for(Language::En).into_iter().collect();
 
         assert!(!pt_keys.is_empty(), "Catálogo pt-BR não pode estar vazio");
         assert!(!en_keys.is_empty(), "Catálogo en não pode estar vazio");

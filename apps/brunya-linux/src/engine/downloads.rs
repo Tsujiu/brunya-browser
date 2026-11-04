@@ -81,7 +81,12 @@ impl DownloadManager {
 
         // Disparar thread de streaming de download
         std::thread::spawn(move || {
-            info!("Iniciando download #{}: {} -> {}", download_id, url_owned, target_owned.display());
+            info!(
+                "Iniciando download #{}: {} -> {}",
+                download_id,
+                url_owned,
+                target_owned.display()
+            );
 
             let config_res = ureq::Agent::config_builder()
                 .timeout_global(Some(std::time::Duration::from_secs(60)))
@@ -101,7 +106,9 @@ impl DownloadManager {
                         Ok(f) => f,
                         Err(e) => {
                             error!("Falha ao criar arquivo de download: {}", e);
-                            storage_clone.update_download_progress(download_id, 0, DownloadState::Failed).ok();
+                            storage_clone
+                                .update_download_progress(download_id, 0, DownloadState::Failed)
+                                .ok();
                             progress_cb(download_id, 0, total_bytes, DownloadState::Failed);
                             return;
                         }
@@ -114,8 +121,19 @@ impl DownloadManager {
                     loop {
                         if cancel_flag.load(Ordering::SeqCst) {
                             info!("Download #{} cancelado pelo usuário", download_id);
-                            storage_clone.update_download_progress(download_id, downloaded, DownloadState::Cancelled).ok();
-                            progress_cb(download_id, downloaded, total_bytes, DownloadState::Cancelled);
+                            storage_clone
+                                .update_download_progress(
+                                    download_id,
+                                    downloaded,
+                                    DownloadState::Cancelled,
+                                )
+                                .ok();
+                            progress_cb(
+                                download_id,
+                                downloaded,
+                                total_bytes,
+                                DownloadState::Cancelled,
+                            );
                             std::fs::remove_file(&target_owned).ok();
                             return;
                         }
@@ -124,31 +142,79 @@ impl DownloadManager {
                             Ok(0) => break, // Fim da transmissão
                             Ok(n) => {
                                 if let Err(e) = file.write_all(&buffer[..n]) {
-                                    error!("Erro de escrita em disco no download #{}: {}", download_id, e);
-                                    storage_clone.update_download_progress(download_id, downloaded, DownloadState::Failed).ok();
-                                    progress_cb(download_id, downloaded, total_bytes, DownloadState::Failed);
+                                    error!(
+                                        "Erro de escrita em disco no download #{}: {}",
+                                        download_id, e
+                                    );
+                                    storage_clone
+                                        .update_download_progress(
+                                            download_id,
+                                            downloaded,
+                                            DownloadState::Failed,
+                                        )
+                                        .ok();
+                                    progress_cb(
+                                        download_id,
+                                        downloaded,
+                                        total_bytes,
+                                        DownloadState::Failed,
+                                    );
                                     return;
                                 }
                                 downloaded += n as i64;
-                                storage_clone.update_download_progress(download_id, downloaded, DownloadState::InProgress).ok();
-                                progress_cb(download_id, downloaded, total_bytes, DownloadState::InProgress);
+                                storage_clone
+                                    .update_download_progress(
+                                        download_id,
+                                        downloaded,
+                                        DownloadState::InProgress,
+                                    )
+                                    .ok();
+                                progress_cb(
+                                    download_id,
+                                    downloaded,
+                                    total_bytes,
+                                    DownloadState::InProgress,
+                                );
                             }
                             Err(e) => {
                                 error!("Erro de rede no download #{}: {}", download_id, e);
-                                storage_clone.update_download_progress(download_id, downloaded, DownloadState::Failed).ok();
-                                progress_cb(download_id, downloaded, total_bytes, DownloadState::Failed);
+                                storage_clone
+                                    .update_download_progress(
+                                        download_id,
+                                        downloaded,
+                                        DownloadState::Failed,
+                                    )
+                                    .ok();
+                                progress_cb(
+                                    download_id,
+                                    downloaded,
+                                    total_bytes,
+                                    DownloadState::Failed,
+                                );
                                 return;
                             }
                         }
                     }
 
-                    info!("Download #{} concluído com sucesso ({} bytes)", download_id, downloaded);
-                    storage_clone.update_download_progress(download_id, downloaded, DownloadState::Completed).ok();
-                    progress_cb(download_id, downloaded, total_bytes, DownloadState::Completed);
+                    info!(
+                        "Download #{} concluído com sucesso ({} bytes)",
+                        download_id, downloaded
+                    );
+                    storage_clone
+                        .update_download_progress(download_id, downloaded, DownloadState::Completed)
+                        .ok();
+                    progress_cb(
+                        download_id,
+                        downloaded,
+                        total_bytes,
+                        DownloadState::Completed,
+                    );
                 }
                 Err(e) => {
                     error!("Erro HTTP ao iniciar download #{}: {}", download_id, e);
-                    storage_clone.update_download_progress(download_id, 0, DownloadState::Failed).ok();
+                    storage_clone
+                        .update_download_progress(download_id, 0, DownloadState::Failed)
+                        .ok();
                     progress_cb(download_id, 0, -1, DownloadState::Failed);
                 }
             }

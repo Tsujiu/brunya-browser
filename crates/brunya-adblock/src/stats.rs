@@ -33,13 +33,24 @@ impl TrackerCategory {
 
     pub fn infer_from_url(url: &str) -> Self {
         let u = url.to_lowercase();
-        if u.contains("analytics") || u.contains("telemetry") || u.contains("stats") || u.contains("metric") {
+        if u.contains("analytics")
+            || u.contains("telemetry")
+            || u.contains("stats")
+            || u.contains("metric")
+        {
             TrackerCategory::AnalyticsAndTracking
-        } else if u.contains("facebook") || u.contains("tiktok") || u.contains("twitter") || u.contains("linkedin") {
+        } else if u.contains("facebook")
+            || u.contains("tiktok")
+            || u.contains("twitter")
+            || u.contains("linkedin")
+        {
             TrackerCategory::SocialWidget
         } else if u.contains("coin") || u.contains("miner") || u.contains("crypto") {
             TrackerCategory::Cryptomining
-        } else if u.contains("fingerprint") || u.contains("canvas") || u.contains("audio-fingerprint") {
+        } else if u.contains("fingerprint")
+            || u.contains("canvas")
+            || u.contains("audio-fingerprint")
+        {
             TrackerCategory::Fingerprinting
         } else if u.contains("phishing") || u.contains("malware") || u.contains("trojan") {
             TrackerCategory::MaliciousThreat
@@ -109,7 +120,9 @@ impl AdblockStats {
             TrackerCategory::Advertisement => {
                 self.ads_counter.fetch_add(1, Ordering::Relaxed);
             }
-            TrackerCategory::AnalyticsAndTracking | TrackerCategory::SocialWidget | TrackerCategory::Fingerprinting => {
+            TrackerCategory::AnalyticsAndTracking
+            | TrackerCategory::SocialWidget
+            | TrackerCategory::Fingerprinting => {
                 self.trackers_counter.fetch_add(1, Ordering::Relaxed);
             }
             TrackerCategory::Cryptomining => {
@@ -139,7 +152,8 @@ impl AdblockStats {
     }
 
     pub fn record_url_cleaned(&self, count: u32) {
-        self.urls_cleaned_counter.fetch_add(count as u64, Ordering::Relaxed);
+        self.urls_cleaned_counter
+            .fetch_add(count as u64, Ordering::Relaxed);
     }
 
     pub fn record_threat_detected(&self) {

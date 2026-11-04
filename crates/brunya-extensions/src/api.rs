@@ -6,8 +6,7 @@
 use crate::errors::{ExtensionError, Result};
 use crate::storage::{ExtensionStorageManager, StorageArea};
 use crate::types::{
-    ContentScriptSpec, ExtensionEvent, ExtensionId, ExtensionInfo,
-    ExtensionMessage, MessageSender,
+    ContentScriptSpec, ExtensionEvent, ExtensionId, ExtensionInfo, ExtensionMessage, MessageSender,
 };
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
@@ -32,8 +31,8 @@ pub struct ApiCallback {
 
 /// Camada de compatibilidade que expõe chrome.* APIs.
 pub struct ApiCompatLayer {
-    runtime_callbacks: RwLock<Vec<ApiCallback>>,
-    storage_cbs: RwLock<HashMap<String, Vec<Box<dyn Fn() + Send + Sync>>>>,
+    _runtime_callbacks: RwLock<Vec<ApiCallback>>,
+    _storage_cbs: RwLock<HashMap<String, Vec<Box<dyn Fn() + Send + Sync>>>>,
     context_menu_items: RwLock<Vec<ContextMenuItem>>,
     alarm_registry: RwLock<HashMap<String, AlarmSpec>>,
     commands_registry: RwLock<Vec<CommandSpec>>,
@@ -67,8 +66,8 @@ pub struct CommandSpec {
 impl ApiCompatLayer {
     pub fn new() -> Self {
         Self {
-            runtime_callbacks: RwLock::new(Vec::new()),
-            storage_cbs: RwLock::new(HashMap::new()),
+            _runtime_callbacks: RwLock::new(Vec::new()),
+            _storage_cbs: RwLock::new(HashMap::new()),
             context_menu_items: RwLock::new(Vec::new()),
             alarm_registry: RwLock::new(HashMap::new()),
             commands_registry: RwLock::new(Vec::new()),
@@ -189,19 +188,13 @@ impl ApiCompatLayer {
     // ── chrome.tabs API ──
 
     /// Query tabs (simplificado).
-    pub fn tabs_query(
-        &self,
-        _query_info: serde_json::Value,
-    ) -> Vec<serde_json::Value> {
+    pub fn tabs_query(&self, _query_info: serde_json::Value) -> Vec<serde_json::Value> {
         // TODO: Integrar com TabManager real
         vec![]
     }
 
     /// Cria uma nova aba.
-    pub fn tabs_create(
-        &self,
-        _create_props: serde_json::Value,
-    ) -> Result<()> {
+    pub fn tabs_create(&self, _create_props: serde_json::Value) -> Result<()> {
         // TODO: Chamar BrunyaWindow::open_new_tab via callback
         Err(ExtensionError::NotImplemented(
             "tabs.create requer integração com a UI do navegador".to_string(),
@@ -241,9 +234,12 @@ impl ApiCompatLayer {
         };
 
         self.alarm_registry.write().insert(name.to_string(), alarm);
-        runtime.dispatch_event(ext_id, ExtensionEvent::AlarmsOnAlarm {
-            name: name.to_string(),
-        });
+        runtime.dispatch_event(
+            ext_id,
+            ExtensionEvent::AlarmsOnAlarm {
+                name: name.to_string(),
+            },
+        );
 
         Ok(())
     }
@@ -364,11 +360,7 @@ impl ApiCompatLayer {
     }
 
     /// Define o texto do badge.
-    pub fn action_set_badge(
-        &self,
-        _ext_id: &ExtensionId,
-        _text: &str,
-    ) {
+    pub fn action_set_badge(&self, _ext_id: &ExtensionId, _text: &str) {
         // TODO: Atualizar UI do navegador para mostrar badge
     }
 }
@@ -399,27 +391,115 @@ impl ApiCompatLayer {
     pub fn compatibility_matrix() -> Vec<ApiCompatibilityMatrix> {
         vec![
             // Essenciais
-            ApiCompatibilityMatrix { api: "chrome.runtime", status: ApiStatus::Partial, notes: &["sendMessage implementado", "connect (Port) não implementado"] },
-            ApiCompatibilityMatrix { api: "chrome.storage", status: ApiStatus::Implemented, notes: &["local, sync, session implementados", "managed não implementado"] },
-            ApiCompatibilityMatrix { api: "chrome.tabs", status: ApiStatus::Partial, notes: &["query implementado (parcial)", "create/update/remove requerem UI callback"] },
-            ApiCompatibilityMatrix { api: "chrome.scripting", status: ApiStatus::Partial, notes: &["executeScript não implementado", "registerContentScripts não implementado"] },
-            ApiCompatibilityMatrix { api: "chrome.action", status: ApiStatus::Partial, notes: &["badge text implementado", "popup requer UI integration"] },
-            ApiCompatibilityMatrix { api: "chrome.permissions", status: ApiStatus::Implemented, notes: &["contains, request, remove implementados"] },
-            ApiCompatibilityMatrix { api: "chrome.notifications", status: ApiStatus::Partial, notes: &["create registrado, mas sem exibição GTK"] },
-            ApiCompatibilityMatrix { api: "chrome.alarms", status: ApiStatus::Implemented, notes: &["create, clear implementados"] },
-            ApiCompatibilityMatrix { api: "chrome.contextMenus", status: ApiStatus::Partial, notes: &["create implementado, onClicked requer UI"] },
-            ApiCompatibilityMatrix { api: "chrome.commands", status: ApiStatus::Partial, notes: &["registro implementado, atalhos de teclado requerem integração"] },
+            ApiCompatibilityMatrix {
+                api: "chrome.runtime",
+                status: ApiStatus::Partial,
+                notes: &[
+                    "sendMessage implementado",
+                    "connect (Port) não implementado",
+                ],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.storage",
+                status: ApiStatus::Implemented,
+                notes: &[
+                    "local, sync, session implementados",
+                    "managed não implementado",
+                ],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.tabs",
+                status: ApiStatus::Partial,
+                notes: &[
+                    "query implementado (parcial)",
+                    "create/update/remove requerem UI callback",
+                ],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.scripting",
+                status: ApiStatus::Partial,
+                notes: &[
+                    "executeScript não implementado",
+                    "registerContentScripts não implementado",
+                ],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.action",
+                status: ApiStatus::Partial,
+                notes: &["badge text implementado", "popup requer UI integration"],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.permissions",
+                status: ApiStatus::Implemented,
+                notes: &["contains, request, remove implementados"],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.notifications",
+                status: ApiStatus::Partial,
+                notes: &["create registrado, mas sem exibição GTK"],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.alarms",
+                status: ApiStatus::Implemented,
+                notes: &["create, clear implementados"],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.contextMenus",
+                status: ApiStatus::Partial,
+                notes: &["create implementado, onClicked requer UI"],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.commands",
+                status: ApiStatus::Partial,
+                notes: &["registro implementado, atalhos de teclado requerem integração"],
+            },
             // Rede e privacidade
-            ApiCompatibilityMatrix { api: "chrome.declarativeNetRequest", status: ApiStatus::NotImplemented, notes: &["Não disponível no WebKitGTK"] },
-            ApiCompatibilityMatrix { api: "chrome.webRequest", status: ApiStatus::NotImplemented, notes: &["Substituído por DNR no V3"] },
-            ApiCompatibilityMatrix { api: "chrome.cookies", status: ApiStatus::Partial, notes: &["API exposta, mas sem integração com WebKit CookieManager"] },
-            ApiCompatibilityMatrix { api: "chrome.webNavigation", status: ApiStatus::Partial, notes: &["Eventos: onCompleted, onBeforeNavigate"] },
+            ApiCompatibilityMatrix {
+                api: "chrome.declarativeNetRequest",
+                status: ApiStatus::NotImplemented,
+                notes: &["Não disponível no WebKitGTK"],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.webRequest",
+                status: ApiStatus::NotImplemented,
+                notes: &["Substituído por DNR no V3"],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.cookies",
+                status: ApiStatus::Partial,
+                notes: &["API exposta, mas sem integração com WebKit CookieManager"],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.webNavigation",
+                status: ApiStatus::Partial,
+                notes: &["Eventos: onCompleted, onBeforeNavigate"],
+            },
             // Integração com navegador
-            ApiCompatibilityMatrix { api: "chrome.bookmarks", status: ApiStatus::Partial, notes: &["Pode integrar com StorageManager"] },
-            ApiCompatibilityMatrix { api: "chrome.downloads", status: ApiStatus::Partial, notes: &["download requer integração com DownloadManager"] },
-            ApiCompatibilityMatrix { api: "chrome.history", status: ApiStatus::Partial, notes: &["Pode integrar com StorageManager"] },
-            ApiCompatibilityMatrix { api: "chrome.windows", status: ApiStatus::Partial, notes: &["create, getCurrent implementados parcialmente"] },
-            ApiCompatibilityMatrix { api: "chrome.sidePanel", status: ApiStatus::NotImplemented, notes: &["Não suportado no WebKitGTK"] },
+            ApiCompatibilityMatrix {
+                api: "chrome.bookmarks",
+                status: ApiStatus::Partial,
+                notes: &["Pode integrar com StorageManager"],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.downloads",
+                status: ApiStatus::Partial,
+                notes: &["download requer integração com DownloadManager"],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.history",
+                status: ApiStatus::Partial,
+                notes: &["Pode integrar com StorageManager"],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.windows",
+                status: ApiStatus::Partial,
+                notes: &["create, getCurrent implementados parcialmente"],
+            },
+            ApiCompatibilityMatrix {
+                api: "chrome.sidePanel",
+                status: ApiStatus::NotImplemented,
+                notes: &["Não suportado no WebKitGTK"],
+            },
         ]
     }
 }
@@ -428,7 +508,6 @@ impl ApiCompatLayer {
 mod tests {
     use super::*;
     use crate::storage::ExtensionStorageManager;
-    use std::path::PathBuf;
 
     #[test]
     fn test_storage_api_flow() {
@@ -441,9 +520,15 @@ mod tests {
         items.insert("key1".to_string(), serde_json::json!("value1"));
         items.insert("key2".to_string(), serde_json::json!(42));
 
-        api.storage_set(&ext_id, StorageArea::Local, items, &storage).unwrap();
+        api.storage_set(&ext_id, StorageArea::Local, items, &storage)
+            .unwrap();
 
-        let result = api.storage_get(&ext_id, StorageArea::Local, vec!["key1".to_string()], &storage);
+        let result = api.storage_get(
+            &ext_id,
+            StorageArea::Local,
+            vec!["key1".to_string()],
+            &storage,
+        );
         assert_eq!(result.get("key1"), Some(&serde_json::json!("value1")));
     }
 

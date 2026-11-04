@@ -28,18 +28,18 @@ pub mod runtime;
 pub mod security;
 pub mod storage;
 pub mod store;
-pub mod update;
 pub mod types;
+pub mod update;
 
 pub use errors::{ExtensionError, Result};
 pub use manager::ExtensionManager;
-pub use manifest::{Manifest, ManifestVersion, ManifestValidation};
+pub use manifest::{Manifest, ManifestValidation, ManifestVersion};
 pub use permissions::{Permission, PermissionLevel, PermissionSet};
 pub use registry::ExtensionRegistry;
 pub use runtime::{ExtensionRuntime, ServiceWorkerState};
 pub use security::SecurityManager;
 pub use storage::ExtensionStorageManager;
-pub use types::{ExtensionId, ExtensionState, ExtensionInfo};
+pub use types::{ExtensionId, ExtensionInfo, ExtensionState};
 pub use update::UpdateManager;
 
 use std::sync::Arc;
@@ -62,7 +62,9 @@ impl ExtensionSystem {
     ) -> Self {
         let registry = Arc::new(ExtensionRegistry::new(data_dir.join("extensions")));
         let permissions = Arc::new(permissions::PermissionsManager::new(storage_mgr));
-        let storage = Arc::new(ExtensionStorageManager::new(data_dir.join("extension-data")));
+        let storage = Arc::new(ExtensionStorageManager::new(
+            data_dir.join("extension-data"),
+        ));
         let security = Arc::new(SecurityManager::new());
         let runtime = Arc::new(ExtensionRuntime::new(security.clone()));
         let update_mgr = Arc::new(UpdateManager::new(

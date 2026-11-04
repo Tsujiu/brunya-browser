@@ -2,13 +2,11 @@
 //!
 //! Suporta Manifest V3 (prioritário) e V2 (compatibilidade limitada).
 
-use crate::types::{
-    BackgroundType, ContentScriptSpec, ExtensionIcon, InstallType,
-};
 use crate::errors::{ExtensionError, Result};
+use crate::types::{BackgroundType, ContentScriptSpec, ExtensionIcon, InstallType};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ManifestVersion {
@@ -274,7 +272,10 @@ impl Manifest {
         let mv = match ManifestVersion::from_u8(self.manifest_version) {
             Some(v) => {
                 if v == ManifestVersion::V2 {
-                    warnings.push("Manifest V2 é legado e terá suporte limitado. Considere migrar para V3.".to_string());
+                    warnings.push(
+                        "Manifest V2 é legado e terá suporte limitado. Considere migrar para V3."
+                            .to_string(),
+                    );
                 }
                 v
             }
@@ -299,7 +300,10 @@ impl Manifest {
         if self.version.is_empty() {
             errors.push("Campo 'version' é obrigatório no manifest.json.".to_string());
         } else if !is_valid_version_string(&self.version) {
-            warnings.push(format!("Formato de versão não padrão: '{}'. Esperado formato semver (x.y.z).", self.version));
+            warnings.push(format!(
+                "Formato de versão não padrão: '{}'. Esperado formato semver (x.y.z).",
+                self.version
+            ));
         }
 
         // Verificar background
@@ -323,14 +327,23 @@ impl Manifest {
         }
 
         // Verificar host_permissions no V3
-        if mv == ManifestVersion::V3 && self.host_permissions.is_empty() && self.permissions.contains(&"<all_urls>".to_string()) {
-            warnings.push("Manifest V3: '<all_urls>' em permissions deve ser movido para 'host_permissions'.".to_string());
+        if mv == ManifestVersion::V3
+            && self.host_permissions.is_empty()
+            && self.permissions.contains(&"<all_urls>".to_string())
+        {
+            warnings.push(
+                "Manifest V3: '<all_urls>' em permissions deve ser movido para 'host_permissions'."
+                    .to_string(),
+            );
         }
 
         // Verificar content scripts
         for (i, cs) in self.content_scripts.iter().enumerate() {
             if cs.matches.is_empty() {
-                warnings.push(format!("Content script #{} não possui 'matches'. Ele nunca será executado.", i + 1));
+                warnings.push(format!(
+                    "Content script #{} não possui 'matches'. Ele nunca será executado.",
+                    i + 1
+                ));
             }
         }
 
@@ -357,7 +370,10 @@ impl Manifest {
             .iter()
             .map(|(size_str, path)| {
                 let size = size_str.parse::<u32>().unwrap_or(48);
-                ExtensionIcon { size, path: path.clone() }
+                ExtensionIcon {
+                    size,
+                    path: path.clone(),
+                }
             })
             .collect();
 
@@ -389,7 +405,10 @@ impl Manifest {
                 exclude_matches: cs.exclude_matches.clone(),
                 css: cs.css.clone(),
                 js: cs.js.clone(),
-                run_at: cs.run_at.clone().unwrap_or_else(|| "document_idle".to_string()),
+                run_at: cs
+                    .run_at
+                    .clone()
+                    .unwrap_or_else(|| "document_idle".to_string()),
                 all_frames: cs.all_frames,
                 match_about_blank: cs.match_about_blank,
                 world: cs.world.clone().unwrap_or_else(|| "ISOLATED".to_string()),
@@ -399,8 +418,14 @@ impl Manifest {
         let now = chrono::Utc::now();
         let locale = self.default_locale.as_deref();
         let name = localize_message(dir, locale, &self.name);
-        let short_name = self.short_name.as_ref().map(|s| localize_message(dir, locale, s));
-        let description = self.description.as_ref().map(|s| localize_message(dir, locale, s));
+        let short_name = self
+            .short_name
+            .as_ref()
+            .map(|s| localize_message(dir, locale, s));
+        let description = self
+            .description
+            .as_ref()
+            .map(|s| localize_message(dir, locale, s));
 
         crate::ExtensionInfo {
             id: ext_id,
@@ -443,7 +468,9 @@ impl Manifest {
 }
 
 /// `default_icon` pode ser uma string (`"icon.png"`) ou um mapa de tamanho para caminho.
-fn de_icon_map<'de, D>(deserializer: D) -> std::result::Result<Option<HashMap<String, String>>, D::Error>
+fn de_icon_map<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<HashMap<String, String>>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -462,7 +489,11 @@ where
                     map.insert(size, path.to_string());
                 }
             }
-            if map.is_empty() { None } else { Some(map) }
+            if map.is_empty() {
+                None
+            } else {
+                Some(map)
+            }
         }
         _ => None,
     })
@@ -488,12 +519,20 @@ where
                 let resources = obj
                     .get("resources")
                     .and_then(|v| v.as_array())
-                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str().map(str::to_string))
+                            .collect()
+                    })
                     .unwrap_or_default();
                 let matches = obj
                     .get("matches")
                     .and_then(|v| v.as_array())
-                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str().map(str::to_string))
+                            .collect()
+                    })
                     .unwrap_or_default();
                 out.push(WebAccessibleResourceManifest {
                     resources,
@@ -538,9 +577,17 @@ pub fn localize_message(dir: &Path, default_locale: Option<&str>, text: &str) ->
     ]);
     for locale in locales {
         let path = dir.join("_locales").join(&locale).join("messages.json");
-        let Ok(raw) = std::fs::read_to_string(&path) else { continue };
-        let Ok(json) = serde_json::from_str::<serde_json::Value>(&raw) else { continue };
-        if let Some(message) = json.get(key).and_then(|entry| entry.get("message")).and_then(|m| m.as_str()) {
+        let Ok(raw) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let Ok(json) = serde_json::from_str::<serde_json::Value>(&raw) else {
+            continue;
+        };
+        if let Some(message) = json
+            .get(key)
+            .and_then(|entry| entry.get("message"))
+            .and_then(|m| m.as_str())
+        {
             return message.to_string();
         }
     }

@@ -1,4 +1,3 @@
-use brunya_extensions::ExtensionSystem;
 use crate::engine::extension_host::{ExtensionBridge, ExtensionTab};
 use crate::engine::WebView;
 use crate::ui::find_bar::FindBar;
@@ -7,6 +6,7 @@ use crate::ui::privacy_popover::PrivacyShieldPopover;
 use crate::ui::tab_bar::BrowserTabBar;
 use brunya_adblock::AdblockEngine;
 use brunya_core::types::{TabId, UrlHelper};
+use brunya_extensions::ExtensionSystem;
 use brunya_i18n::t;
 use brunya_settings::SettingsManager;
 use brunya_storage::StorageManager;
@@ -64,9 +64,9 @@ impl BrunyaWindow {
         background_host.set_height_request(0);
         background_host.set_overflow(gtk4::Overflow::Hidden);
         root_box.append(&background_host);
-        let extension_bridge = extension_system.clone().map(|system| {
-            ExtensionBridge::new(system, background_host)
-        });
+        let extension_bridge = extension_system
+            .clone()
+            .map(|system| ExtensionBridge::new(system, background_host));
 
         // Stack para visualização do conteúdo das abas com transição fluida e elegante
         let tab_stack = Stack::builder()
@@ -124,7 +124,10 @@ impl BrunyaWindow {
             let nav_win = Rc::downgrade(&brunya_window);
             bridge.set_browser_controls(
                 Rc::new(move || {
-                    tabs_win.upgrade().map(|win| win.extension_tabs()).unwrap_or_default()
+                    tabs_win
+                        .upgrade()
+                        .map(|win| win.extension_tabs())
+                        .unwrap_or_default()
                 }),
                 Rc::new(move |url| {
                     if let Some(win) = open_win.upgrade() {
@@ -143,8 +146,16 @@ impl BrunyaWindow {
         brunya_window.setup_shortcuts();
 
         // Abrir primeira aba
-        let start_url = if is_private { "brunya://private" } else { "brunya://newtab" };
-        let start_title = if is_private { "Janela Privada" } else { &t!("common.new_tab") };
+        let start_url = if is_private {
+            "brunya://private"
+        } else {
+            "brunya://newtab"
+        };
+        let start_title = if is_private {
+            "Janela Privada"
+        } else {
+            &t!("common.new_tab")
+        };
         brunya_window.open_new_tab(start_url, start_title);
         brunya_window.handle_extension_change("refresh");
 
@@ -195,7 +206,9 @@ impl BrunyaWindow {
         while let Some(child) = actions.first_child() {
             actions.remove(&child);
         }
-        let Some(system) = &self.extension_system else { return };
+        let Some(system) = &self.extension_system else {
+            return;
+        };
         let mut extensions = system.manager.list_active_extensions();
         extensions.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
         for ext in extensions {
@@ -203,7 +216,9 @@ impl BrunyaWindow {
                 .css_classes(["flat", "circular", "nav-btn"])
                 .tooltip_text(&ext.name)
                 .build();
-            button.set_child(Some(&crate::engine::extension_host::extension_image(&ext, 16)));
+            button.set_child(Some(&crate::engine::extension_host::extension_image(
+                &ext, 16,
+            )));
             let id = ext.id.0.clone();
             let has_popup = ext.has_popup;
             let bridge = self.extension_bridge.clone();
@@ -235,8 +250,19 @@ impl BrunyaWindow {
     pub fn open_new_tab(self: &Rc<Self>, url: &str, title: &str) {
         // When opening settings, reuse any existing newtab instead of adding a new tab
         if url == "brunya://settings" {
-            if let Some(newtab) = self.tab_manager.list_tabs().iter().find(|t| t.url == "brunya://newtab") {
-                self.tab_manager.update_tab_metadata(newtab.id, "brunya://settings", title, None, 0);
+            if let Some(newtab) = self
+                .tab_manager
+                .list_tabs()
+                .iter()
+                .find(|t| t.url == "brunya://newtab")
+            {
+                self.tab_manager.update_tab_metadata(
+                    newtab.id,
+                    "brunya://settings",
+                    title,
+                    None,
+                    0,
+                );
                 if let Some(view) = self.tab_views.borrow().get(&newtab.id) {
                     view.load_url(url);
                     self.switch_to_tab(newtab.id);
@@ -355,7 +381,12 @@ impl BrunyaWindow {
 
         let this_dup = self.clone();
         let on_dup = move |tid: TabId| {
-            if let Some(tab) = this_dup.tab_manager.list_tabs().iter().find(|t| t.id == tid) {
+            if let Some(tab) = this_dup
+                .tab_manager
+                .list_tabs()
+                .iter()
+                .find(|t| t.id == tid)
+            {
                 this_dup.open_new_tab(&tab.url, &format!("{} (Cópia)", tab.title));
             }
         };
@@ -366,13 +397,29 @@ impl BrunyaWindow {
             this_pin.refresh_tab_bar();
         };
 
-        self.tab_bar
-            .borrow_mut()
-            .render_tabs(&tabs, active_id, &favicons, &ram_usages, on_switch, on_close, on_dup, on_pin);
+        self.tab_bar.borrow_mut().render_tabs(
+            &tabs,
+            active_id,
+            &favicons,
+            &ram_usages,
+            on_switch,
+            on_close,
+            on_dup,
+            on_pin,
+        );
     }
 
-    fn on_active_tab_state_changed(self: &Rc<Self>, tab_id: TabId, state: &brunya_core::types::NavigationState) {
-        let tab_idx = self.tab_manager.list_tabs().iter().position(|t| t.id == tab_id).unwrap_or(0);
+    fn on_active_tab_state_changed(
+        self: &Rc<Self>,
+        tab_id: TabId,
+        state: &brunya_core::types::NavigationState,
+    ) {
+        let tab_idx = self
+            .tab_manager
+            .list_tabs()
+            .iter()
+            .position(|t| t.id == tab_id)
+            .unwrap_or(0);
         let ram_mb = if let Some(view) = self.tab_views.borrow().get(&tab_id) {
             view.calculate_ram_mb(tab_idx, &state.url)
         } else {
@@ -380,8 +427,13 @@ impl BrunyaWindow {
         };
 
         // Atualizar metadados no gerenciador de abas
-        self.tab_manager
-            .update_tab_metadata(tab_id, &state.url, &state.title, state.favicon_url.clone(), ram_mb);
+        self.tab_manager.update_tab_metadata(
+            tab_id,
+            &state.url,
+            &state.title,
+            state.favicon_url.clone(),
+            ram_mb,
+        );
 
         // Se a aba notificada for a aba atualmente ativa, atualiza a UI
         if let Some(active) = self.tab_manager.active_tab() {
@@ -396,8 +448,14 @@ impl BrunyaWindow {
     pub fn bookmark_current_page(self: &Rc<Self>) {
         if let Some(active) = self.tab_manager.active_tab() {
             if !active.url.is_empty() && active.url != "brunya://newtab" {
-                let title = if active.title.is_empty() { "Favorito" } else { &active.title };
-                self.storage_manager.add_bookmark(&active.url, title, "").ok();
+                let title = if active.title.is_empty() {
+                    "Favorito"
+                } else {
+                    &active.title
+                };
+                self.storage_manager
+                    .add_bookmark(&active.url, title, "")
+                    .ok();
                 self.header.bookmark_btn.set_icon_name("starred-symbolic");
             }
         }
@@ -465,7 +523,8 @@ impl BrunyaWindow {
         self.header.back_btn.set_sensitive(state.can_go_back);
         self.header.forward_btn.set_sensitive(state.can_go_forward);
         self.header.set_loading(state.is_loading);
-        self.header.set_blocked_count(self.adblock_engine.total_blocked());
+        self.header
+            .set_blocked_count(self.adblock_engine.total_blocked());
 
         let win_title = if state.title.is_empty() {
             t!("common.app_name")
@@ -513,13 +572,19 @@ impl BrunyaWindow {
                 this_theme.window.add_css_class("dark-theme");
                 this_theme.window.remove_css_class("light-theme");
                 this_theme.header.update_theme_icons(true);
-                this_theme.settings_manager.update(|s| s.theme = brunya_settings::ThemePreference::Dark).ok();
+                this_theme
+                    .settings_manager
+                    .update(|s| s.theme = brunya_settings::ThemePreference::Dark)
+                    .ok();
             } else {
                 style_mgr.set_color_scheme(libadwaita::ColorScheme::ForceLight);
                 this_theme.window.add_css_class("light-theme");
                 this_theme.window.remove_css_class("dark-theme");
                 this_theme.header.update_theme_icons(false);
-                this_theme.settings_manager.update(|s| s.theme = brunya_settings::ThemePreference::Light).ok();
+                this_theme
+                    .settings_manager
+                    .update(|s| s.theme = brunya_settings::ThemePreference::Light)
+                    .ok();
             }
         });
 
@@ -561,13 +626,11 @@ impl BrunyaWindow {
         let this_shield = self.clone();
         self.header.shield_btn.connect_clicked(move |btn| {
             let active = this_shield.tab_manager.active_tab();
-            let current_site = active
-                .as_ref()
-                .map(|t| t.url.clone())
-                .unwrap_or_default();
+            let current_site = active.as_ref().map(|t| t.url.clone()).unwrap_or_default();
             let tid = active.as_ref().map(|t| t.id).unwrap_or_default();
 
-            let popover = PrivacyShieldPopover::new(this_shield.adblock_engine.clone(), tid, current_site);
+            let popover =
+                PrivacyShieldPopover::new(this_shield.adblock_engine.clone(), tid, current_site);
             popover.popover.set_parent(btn);
             popover.popover.popup();
         });
@@ -575,14 +638,20 @@ impl BrunyaWindow {
         // 9. Menu Principal
         let menu_model = gio::Menu::new();
         menu_model.append(Some(&t!("common.new_tab")), Some("app.new_tab"));
-        menu_model.append(Some(&t!("common.private_window")), Some("app.new_private_window"));
+        menu_model.append(
+            Some(&t!("common.private_window")),
+            Some("app.new_private_window"),
+        );
         menu_model.append(Some(&t!("common.duplicate_tab")), Some("app.duplicate_tab"));
         menu_model.append(Some(&t!("common.bookmarks")), Some("app.open_bookmarks"));
         menu_model.append(Some(&t!("common.history")), Some("app.open_history"));
         menu_model.append(Some(&t!("common.downloads")), Some("app.open_downloads"));
         menu_model.append(Some(&t!("common.settings")), Some("app.open_settings"));
         menu_model.append(Some(&t!("common.about")), Some("app.open_about"));
-        menu_model.append(Some(&t!("extensions.extensions_title")), Some("app.open_extensions"));
+        menu_model.append(
+            Some(&t!("extensions.extensions_title")),
+            Some("app.open_extensions"),
+        );
         menu_model.append(Some(&t!("common.quit")), Some("app.quit"));
         self.header.menu_btn.set_menu_model(Some(&menu_model));
     }
@@ -648,7 +717,10 @@ impl BrunyaWindow {
                         return glib::Propagation::Stop;
                     }
                     gdk4::Key::e if is_shift => {
-                        this_key.open_new_tab("brunya://extensions", &t!("extensions.extensions_title"));
+                        this_key.open_new_tab(
+                            "brunya://extensions",
+                            &t!("extensions.extensions_title"),
+                        );
                         return glib::Propagation::Stop;
                     }
                     gdk4::Key::f => {

@@ -1,5 +1,7 @@
 # Política de Segurança — Brunya Browser
 
+O canal para relatar vulnerabilidade, sem issue pública, está em [SECURITY.md](../SECURITY.md). Este arquivo descreve o modelo de ameaça usado no desenvolvimento.
+
 A segurança e a privacidade dos usuários são princípios inegociáveis no desenvolvimento do Brunya Browser.
 
 ---

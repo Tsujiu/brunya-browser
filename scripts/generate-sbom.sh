@@ -35,7 +35,7 @@ if os.path.exists(lock_file):
         if name.startswith('brunya-'):
             comp['type'] = 'application' if name == 'brunya-linux' else 'library'
             comp['supplier'] = {'name': 'Brunya Browser Team', 'url': ['https://brunyabrowser.org']}
-            comp['licenses'] = [{'license': {'id': 'Apache-2.0'}}]
+            comp['licenses'] = [{'license': {'name': 'LicenseRef-Brunya-All-Rights-Reserved'}}]
         components.append(comp)
 
 sbom = {
@@ -53,7 +53,7 @@ sbom = {
             'name': 'brunya-browser',
             'version': '0.3.0',
             'description': 'Navegador web rápido, leve e privado para Linux',
-            'licenses': [{'license': {'id': 'Apache-2.0'}}],
+            'licenses': [{'license': {'name': 'LicenseRef-Brunya-All-Rights-Reserved'}}],
             'purl': 'pkg:deb/ubuntu/brunya-browser@0.3.0?arch=amd64'
         }
     },

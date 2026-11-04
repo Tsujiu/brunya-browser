@@ -1,10 +1,10 @@
 //! Diagnósticos de desempenho e medição precisa de recursos do sistema para o Brunya Browser.
 
-pub mod memory_pressure;
 pub mod cpu_features;
+pub mod memory_pressure;
 
-pub use memory_pressure::{MemoryPressureLevel, SystemMemorySnapshot};
 pub use cpu_features::CpuCapabilities;
+pub use memory_pressure::{MemoryPressureLevel, SystemMemorySnapshot};
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -125,7 +125,10 @@ impl StartupBenchmark {
 
     pub fn mark_interactive(&self, label: &str) -> u128 {
         let elapsed = self.start_time.elapsed().as_millis();
-        info!("Benchmark [{}]: {} ms até prontidão interativa", label, elapsed);
+        info!(
+            "Benchmark [{}]: {} ms até prontidão interativa",
+            label, elapsed
+        );
         elapsed
     }
 }

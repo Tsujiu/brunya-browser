@@ -32,15 +32,51 @@ pub struct ThreatIntelligence;
 
 impl ThreatIntelligence {
     const KNOWN_THREAT_SIGNATURES: &'static [(&'static str, ThreatCategory, &'static str)] = &[
-        ("account-verification-login", ThreatCategory::Phishing, "Padrão de phishing para credenciais bancárias"),
-        ("secure-banking-update", ThreatCategory::Phishing, "Tentativa de personificação de instituição financeira"),
-        ("crypto-airdrop-claim", ThreatCategory::FraudulentDomain, "Golpe de engenharia social em criptoativos"),
-        ("free-giftcard-generator", ThreatCategory::FraudulentDomain, "Página maliciosa de captura de dados"),
-        ("system-driver-update.exe", ThreatCategory::Malware, "Executável malicioso disfarçado de atualização"),
-        ("payload.bin", ThreatCategory::Malware, "Distribuição de binário perigoso conhecido"),
-        ("coinhive.min.js", ThreatCategory::Cryptojacking, "Script de mineração de Monero não autorizada"),
-        ("cryptonight.wasm", ThreatCategory::Cryptojacking, "Binário WebAssembly de mineração oculta"),
-        ("miner.monero", ThreatCategory::Cryptojacking, "Pool de mineração de criptomoedas"),
+        (
+            "account-verification-login",
+            ThreatCategory::Phishing,
+            "Padrão de phishing para credenciais bancárias",
+        ),
+        (
+            "secure-banking-update",
+            ThreatCategory::Phishing,
+            "Tentativa de personificação de instituição financeira",
+        ),
+        (
+            "crypto-airdrop-claim",
+            ThreatCategory::FraudulentDomain,
+            "Golpe de engenharia social em criptoativos",
+        ),
+        (
+            "free-giftcard-generator",
+            ThreatCategory::FraudulentDomain,
+            "Página maliciosa de captura de dados",
+        ),
+        (
+            "system-driver-update.exe",
+            ThreatCategory::Malware,
+            "Executável malicioso disfarçado de atualização",
+        ),
+        (
+            "payload.bin",
+            ThreatCategory::Malware,
+            "Distribuição de binário perigoso conhecido",
+        ),
+        (
+            "coinhive.min.js",
+            ThreatCategory::Cryptojacking,
+            "Script de mineração de Monero não autorizada",
+        ),
+        (
+            "cryptonight.wasm",
+            ThreatCategory::Cryptojacking,
+            "Binário WebAssembly de mineração oculta",
+        ),
+        (
+            "miner.monero",
+            ThreatCategory::Cryptojacking,
+            "Pool de mineração de criptomoedas",
+        ),
     ];
 
     /// Inspeciona uma URL contra a base de dados de inteligência de ameaças do BruNya Shield

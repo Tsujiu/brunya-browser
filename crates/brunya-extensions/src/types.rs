@@ -166,23 +166,62 @@ pub struct MessageSender {
 /// Evento que pode ativar um Service Worker de extensão.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ExtensionEvent {
-    RuntimeOnInstalled { reason: String, previous_version: Option<String> },
+    RuntimeOnInstalled {
+        reason: String,
+        previous_version: Option<String>,
+    },
     RuntimeOnStartup,
     RuntimeOnSuspend,
-    RuntimeOnMessage { message: ExtensionMessage },
-    TabsOnCreated { tab_id: u64, url: Option<String> },
-    TabsOnUpdated { tab_id: u64, url: Option<String>, status: String },
-    TabsOnActivated { tab_id: u64 },
-    TabsOnRemoved { tab_id: u64 },
-    WebNavigationOnCompleted { tab_id: u64, url: String },
-    WebNavigationOnBeforeNavigate { tab_id: u64, url: String },
-    AlarmsOnAlarm { name: String },
-    StorageOnChanged { keys: Vec<String>, area: String },
-    ActionOnClicked { tab_id: u64 },
-    CommandsOnCommand { command: String, tab_id: Option<u64> },
-    ContextMenusOnClicked { menu_item_id: String, tab_id: u64 },
-    PermissionsOnAdded { permissions: Vec<String> },
-    PermissionsOnRemoved { permissions: Vec<String> },
+    RuntimeOnMessage {
+        message: ExtensionMessage,
+    },
+    TabsOnCreated {
+        tab_id: u64,
+        url: Option<String>,
+    },
+    TabsOnUpdated {
+        tab_id: u64,
+        url: Option<String>,
+        status: String,
+    },
+    TabsOnActivated {
+        tab_id: u64,
+    },
+    TabsOnRemoved {
+        tab_id: u64,
+    },
+    WebNavigationOnCompleted {
+        tab_id: u64,
+        url: String,
+    },
+    WebNavigationOnBeforeNavigate {
+        tab_id: u64,
+        url: String,
+    },
+    AlarmsOnAlarm {
+        name: String,
+    },
+    StorageOnChanged {
+        keys: Vec<String>,
+        area: String,
+    },
+    ActionOnClicked {
+        tab_id: u64,
+    },
+    CommandsOnCommand {
+        command: String,
+        tab_id: Option<u64>,
+    },
+    ContextMenusOnClicked {
+        menu_item_id: String,
+        tab_id: u64,
+    },
+    PermissionsOnAdded {
+        permissions: Vec<String>,
+    },
+    PermissionsOnRemoved {
+        permissions: Vec<String>,
+    },
 }
 
 fn hex_encode(bytes: &[u8]) -> String {

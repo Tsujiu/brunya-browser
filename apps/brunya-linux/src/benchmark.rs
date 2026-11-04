@@ -38,7 +38,10 @@ pub fn run_full_benchmark() {
     let init_duration = t_init_start.elapsed();
 
     println!("1. TEMPO DE CARGA DOS SUBSISTEMAS:");
-    println!("   • Carga Completa (Storage + Adblock + Tabs + Settings + i18n): {:.2} ms", init_duration.as_secs_f64() * 1000.0);
+    println!(
+        "   • Carga Completa (Storage + Adblock + Tabs + Settings + i18n): {:.2} ms",
+        init_duration.as_secs_f64() * 1000.0
+    );
     println!("   • Meta do Projeto: < 100.0 ms  [STATUS: SUPERADO]");
 
     // 3. Memória RSS Inicial (Linha de Base - 0 abas)
@@ -46,8 +49,14 @@ pub fn run_full_benchmark() {
     let rss_base_mb = mem_base.resident_set_size_kb as f64 / 1024.0;
     println!();
     println!("2. MEMÓRIA EM REPOUSO (LINHA DE BASE):");
-    println!("   • Memória RSS Inicial: {:.2} MB ({} KB)", rss_base_mb, mem_base.resident_set_size_kb);
-    println!("   • Memória Virtual: {:.2} MB", mem_base.virtual_memory_kb as f64 / 1024.0);
+    println!(
+        "   • Memória RSS Inicial: {:.2} MB ({} KB)",
+        rss_base_mb, mem_base.resident_set_size_kb
+    );
+    println!(
+        "   • Memória Virtual: {:.2} MB",
+        mem_base.virtual_memory_kb as f64 / 1024.0
+    );
     println!("   • Meta de Sobrecarga Inicial: < 150.0 MB  [STATUS: SUPERADO (6x menor)]");
 
     // 4. Teste de Throughput do Adblock (10.000 avaliações de URL)
@@ -56,9 +65,15 @@ pub fn run_full_benchmark() {
     let t_adblock_start = Instant::now();
     let test_tab = brunya_core::types::TabId::new();
     let test_urls = [
-        ("https://securepubads.g.doubleclick.net/gampad/ads?client=ca-pub-123", true),
+        (
+            "https://securepubads.g.doubleclick.net/gampad/ads?client=ca-pub-123",
+            true,
+        ),
         ("https://www.google-analytics.com/analytics.js", true),
-        ("https://kernel.org/pub/linux/kernel/v6.x/linux-6.12.tar.xz", false),
+        (
+            "https://kernel.org/pub/linux/kernel/v6.x/linux-6.12.tar.xz",
+            false,
+        ),
         ("https://connect.facebook.net/en_US/fbevents.js", true),
         ("https://docs.rs/gtk4/latest/gtk4/struct.Box.html", false),
         ("https://criteo.com/delivery/lg.php?bannerid=45", true),
@@ -72,15 +87,31 @@ pub fn run_full_benchmark() {
     let mut blocked_count = 0usize;
     for i in 0..total_evaluations {
         let (url, _) = test_urls[i % test_urls.len()];
-        if adblock.should_block(test_tab, url, Some("example.com"), Some(brunya_adblock::ResourceType::Script)) {
+        if adblock.should_block(
+            test_tab,
+            url,
+            Some("example.com"),
+            Some(brunya_adblock::ResourceType::Script),
+        ) {
             blocked_count += 1;
         }
     }
     let adblock_duration = t_adblock_start.elapsed();
     let req_per_sec = total_evaluations as f64 / adblock_duration.as_secs_f64();
-    println!("   • Requisições avaliadas: {} em {:.2} ms", total_evaluations, adblock_duration.as_secs_f64() * 1000.0);
-    println!("   • Taxa de processamento: {:.0} requisições/segundo", req_per_sec);
-    println!("   • Requisições bloqueadas: {} ({:.1}%)", blocked_count, (blocked_count as f64 / total_evaluations as f64) * 100.0);
+    println!(
+        "   • Requisições avaliadas: {} em {:.2} ms",
+        total_evaluations,
+        adblock_duration.as_secs_f64() * 1000.0
+    );
+    println!(
+        "   • Taxa de processamento: {:.0} requisições/segundo",
+        req_per_sec
+    );
+    println!(
+        "   • Requisições bloqueadas: {} ({:.1}%)",
+        blocked_count,
+        (blocked_count as f64 / total_evaluations as f64) * 100.0
+    );
 
     // 5. Simulação de Carga de Abas: 1 aba, 10 abas, 30 abas
     println!();
@@ -90,23 +121,41 @@ pub fn run_full_benchmark() {
     tab_manager.open_tab("https://kernel.org", "The Linux Kernel Archives");
     let mem_1_tab = ProcessMemoryReport::current_process().unwrap();
     let rss_1_mb = mem_1_tab.resident_set_size_kb as f64 / 1024.0;
-    println!("   • Consumo com 1 aba ativa: {:.2} MB (+{:.2} MB)", rss_1_mb, rss_1_mb - rss_base_mb);
+    println!(
+        "   • Consumo com 1 aba ativa: {:.2} MB (+{:.2} MB)",
+        rss_1_mb,
+        rss_1_mb - rss_base_mb
+    );
 
     // 10 Abas
     for i in 2..=10 {
-        tab_manager.open_tab(&format!("https://site-{}.com", i), &format!("Aba de Teste #{}", i));
+        tab_manager.open_tab(
+            &format!("https://site-{}.com", i),
+            &format!("Aba de Teste #{}", i),
+        );
     }
     let mem_10_tab = ProcessMemoryReport::current_process().unwrap();
     let rss_10_mb = mem_10_tab.resident_set_size_kb as f64 / 1024.0;
-    println!("   • Consumo com 10 abas ativas: {:.2} MB (+{:.2} MB)", rss_10_mb, rss_10_mb - rss_base_mb);
+    println!(
+        "   • Consumo com 10 abas ativas: {:.2} MB (+{:.2} MB)",
+        rss_10_mb,
+        rss_10_mb - rss_base_mb
+    );
 
     // 30 Abas
     for i in 11..=30 {
-        tab_manager.open_tab(&format!("https://site-{}.com", i), &format!("Aba de Teste #{}", i));
+        tab_manager.open_tab(
+            &format!("https://site-{}.com", i),
+            &format!("Aba de Teste #{}", i),
+        );
     }
     let mem_30_tab = ProcessMemoryReport::current_process().unwrap();
     let rss_30_mb = mem_30_tab.resident_set_size_kb as f64 / 1024.0;
-    println!("   • Consumo com 30 abas ativas: {:.2} MB (+{:.2} MB)", rss_30_mb, rss_30_mb - rss_base_mb);
+    println!(
+        "   • Consumo com 30 abas ativas: {:.2} MB (+{:.2} MB)",
+        rss_30_mb,
+        rss_30_mb - rss_base_mb
+    );
 
     // 6. Impacto da Suspensão Inteligente de Abas Inativas
     println!();
@@ -117,17 +166,27 @@ pub fn run_full_benchmark() {
     let susp_duration = t_susp_start.elapsed();
 
     println!("   • Abas suspensas com sucesso: {} de 30", suspended.len());
-    println!("   • Tempo para suspender 29 abas: {:.3} ms ({:.1} µs/aba)", susp_duration.as_secs_f64() * 1000.0, (susp_duration.as_micros() as f64) / suspended.len() as f64);
+    println!(
+        "   • Tempo para suspender 29 abas: {:.3} ms ({:.1} µs/aba)",
+        susp_duration.as_secs_f64() * 1000.0,
+        (susp_duration.as_micros() as f64) / suspended.len() as f64
+    );
 
     // 7. Teste de Reativação e Restauração Instantânea
     let t_restore_start = Instant::now();
     if let Some(&first_suspended) = suspended.first() {
         tab_manager.set_active_tab(first_suspended);
         let restored_state = tab_manager.get_discarded_state(first_suspended);
-        assert!(restored_state.is_some(), "Estado da aba suspensa deve ser retido para restauração");
+        assert!(
+            restored_state.is_some(),
+            "Estado da aba suspensa deve ser retido para restauração"
+        );
     }
     let restore_duration = t_restore_start.elapsed();
-    println!("   • Latência de restauração de aba suspensa: {:.3} ms [INSTANTÂNEA]", restore_duration.as_secs_f64() * 1000.0);
+    println!(
+        "   • Latência de restauração de aba suspensa: {:.3} ms [INSTANTÂNEA]",
+        restore_duration.as_secs_f64() * 1000.0
+    );
 
     println!();
     println!("================================================================================");

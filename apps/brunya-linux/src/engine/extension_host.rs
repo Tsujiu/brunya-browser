@@ -120,7 +120,10 @@ impl ExtensionBridge {
     }
 
     pub fn inject_content(self: &Rc<Self>, view: &WebView, url: &str, run_at: &str) {
-        if !url.starts_with("http://") && !url.starts_with("https://") && !url.starts_with("file://") {
+        if !url.starts_with("http://")
+            && !url.starts_with("https://")
+            && !url.starts_with("file://")
+        {
             return;
         }
         let view_key = ptr_key(view);
@@ -157,8 +160,12 @@ impl ExtensionBridge {
     }
 
     pub fn open_popup(self: &Rc<Self>, parent: &impl IsA<gtk4::Widget>, ext_id: &str) {
-        let Some(info) = self.extension(ext_id) else { return };
-        let Some(popup) = info.popup_path.clone() else { return };
+        let Some(info) = self.extension(ext_id) else {
+            return;
+        };
+        let Some(popup) = info.popup_path.clone() else {
+            return;
+        };
         let popover = gtk4::Popover::new();
         popover.set_parent(parent);
         popover.set_autohide(true);
@@ -179,9 +186,13 @@ impl ExtensionBridge {
     }
 
     pub fn fire_action_clicked(&self, ext_id: &str, tab: &ExtensionTab) {
-        let Some(view) = self.backgrounds.borrow().get(ext_id).cloned() else { return };
+        let Some(view) = self.backgrounds.borrow().get(ext_id).cloned() else {
+            return;
+        };
         let tab_js = tab_value(tab).to_string();
-        let script = format!("if (globalThis.__brunyaActionClick) globalThis.__brunyaActionClick({tab_js});");
+        let script = format!(
+            "if (globalThis.__brunyaActionClick) globalThis.__brunyaActionClick({tab_js});"
+        );
         view.evaluate_javascript(&script, None, None, None::<&gio::Cancellable>, |_| {});
     }
 
@@ -202,12 +213,18 @@ impl ExtensionBridge {
                 return;
             }
             *fired.borrow_mut() = true;
-            let call = if just_installed { "__brunyaFireInstalled" } else { "__brunyaFireStartup" };
+            let call = if just_installed {
+                "__brunyaFireInstalled"
+            } else {
+                "__brunyaFireStartup"
+            };
             let script = format!("if (globalThis.{call}) globalThis.{call}();");
             view.evaluate_javascript(&script, None, None, None::<&gio::Cancellable>, |_| {});
         });
         view.load_uri(&url);
-        self.backgrounds.borrow_mut().insert(info.id.0.clone(), view);
+        self.backgrounds
+            .borrow_mut()
+            .insert(info.id.0.clone(), view);
     }
 
     fn prepare_extension_view(self: &Rc<Self>, view: &WebView, info: &ExtensionInfo) {
@@ -226,7 +243,9 @@ impl ExtensionBridge {
     }
 
     fn connect_messages(self: &Rc<Self>, view: &WebView) {
-        let Some(manager) = view.user_content_manager() else { return };
+        let Some(manager) = view.user_content_manager() else {
+            return;
+        };
         let bridge = self.clone();
         let source = view.clone();
         manager.connect_script_message_received(Some("brunyaExt"), move |_manager, value| {
@@ -249,14 +268,24 @@ impl ExtensionBridge {
         let op = msg.get("op").and_then(|v| v.as_str()).unwrap_or("");
         if op == "reply" {
             let reply_to = msg.get("replyTo").and_then(|v| v.as_str()).unwrap_or("");
-            let payload = msg.get("payload").cloned().unwrap_or(serde_json::Value::Null);
+            let payload = msg
+                .get("payload")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
             self.finish_reply(reply_to, payload, None);
             return;
         }
 
-        let ext_id = msg.get("extId").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let ext_id = msg
+            .get("extId")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
         let js_id = msg.get("id").and_then(|v| v.as_i64()).unwrap_or(0);
-        let context = msg.get("context").and_then(|v| v.as_str()).unwrap_or("page");
+        let context = msg
+            .get("context")
+            .and_then(|v| v.as_str())
+            .unwrap_or("page");
         let world = (context == "content").then(|| world_name(&ext_id));
         let extension_id = ExtensionId::new(ext_id.clone());
 
@@ -267,18 +296,33 @@ impl ExtensionBridge {
 
         let result = match op {
             "storage.get" => Ok(self.storage_get(&extension_id, &msg)),
-            "storage.set" => self.storage_set(&extension_id, &msg).map(|_| serde_json::Value::Null),
-            "storage.remove" => self.storage_remove(&extension_id, &msg).map(|_| serde_json::Value::Null),
-            "storage.clear" => self.storage_clear(&extension_id, &msg).map(|_| serde_json::Value::Null),
+            "storage.set" => self
+                .storage_set(&extension_id, &msg)
+                .map(|_| serde_json::Value::Null),
+            "storage.remove" => self
+                .storage_remove(&extension_id, &msg)
+                .map(|_| serde_json::Value::Null),
+            "storage.clear" => self
+                .storage_clear(&extension_id, &msg)
+                .map(|_| serde_json::Value::Null),
             "tabs.query" => Ok(self.tabs_query(msg.get("query"))),
-            "tabs.current" => Ok(self.tab_for_view(view).map(|tab| tab_value(&tab)).unwrap_or(serde_json::Value::Null)),
+            "tabs.current" => Ok(self
+                .tab_for_view(view)
+                .map(|tab| tab_value(&tab))
+                .unwrap_or(serde_json::Value::Null)),
             "tabs.create" => self.tabs_create(msg.get("props")),
             "tabs.update" => self.tabs_update(&msg),
             other => Err(format!("Operação de extensão não suportada: {other}")),
         };
         match result {
             Ok(payload) => self.answer(view, world.as_deref(), js_id, payload, None),
-            Err(err) => self.answer(view, world.as_deref(), js_id, serde_json::Value::Null, Some(err)),
+            Err(err) => self.answer(
+                view,
+                world.as_deref(),
+                js_id,
+                serde_json::Value::Null,
+                Some(err),
+            ),
         }
     }
 
@@ -290,19 +334,32 @@ impl ExtensionBridge {
         msg: &serde_json::Value,
         world: Option<String>,
     ) {
-        let token = msg.get("pageToken").and_then(|v| v.as_str()).unwrap_or("page");
+        let token = msg
+            .get("pageToken")
+            .and_then(|v| v.as_str())
+            .unwrap_or("page");
         let reply_to = format!("{token}:{js_id}");
         let background = self.backgrounds.borrow().get(ext_id).cloned();
-        let from_background = background.as_ref().map(|bg| ptr_key(bg) == ptr_key(view)).unwrap_or(false);
+        let from_background = background
+            .as_ref()
+            .map(|bg| ptr_key(bg) == ptr_key(view))
+            .unwrap_or(false);
         if from_background || background.is_none() {
             self.answer(view, world.as_deref(), js_id, serde_json::Value::Null, None);
             return;
         }
         self.replies.borrow_mut().insert(
             reply_to.clone(),
-            ReplyTarget { view: view.clone(), world, js_id },
+            ReplyTarget {
+                view: view.clone(),
+                world,
+                js_id,
+            },
         );
-        let message = msg.get("message").cloned().unwrap_or(serde_json::Value::Null);
+        let message = msg
+            .get("message")
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
         let sender = serde_json::json!({
             "id": ext_id,
             "url": view.uri().map(|u| u.to_string()).unwrap_or_default(),
@@ -318,8 +375,16 @@ impl ExtensionBridge {
     }
 
     fn finish_reply(&self, reply_to: &str, payload: serde_json::Value, err: Option<String>) {
-        let Some(target) = self.replies.borrow_mut().remove(reply_to) else { return };
-        self.answer(&target.view, target.world.as_deref(), target.js_id, payload, err);
+        let Some(target) = self.replies.borrow_mut().remove(reply_to) else {
+            return;
+        };
+        self.answer(
+            &target.view,
+            target.world.as_deref(),
+            target.js_id,
+            payload,
+            err,
+        );
     }
 
     fn answer(
@@ -367,7 +432,10 @@ impl ExtensionBridge {
             Some(serde_json::Value::Object(defaults)) => {
                 let mut out = serde_json::Map::new();
                 for (key, default) in defaults {
-                    out.insert(key.clone(), all.get(key).cloned().unwrap_or_else(|| default.clone()));
+                    out.insert(
+                        key.clone(),
+                        all.get(key).cloned().unwrap_or_else(|| default.clone()),
+                    );
                 }
                 serde_json::Value::Object(out)
             }
@@ -400,7 +468,10 @@ impl ExtensionBridge {
             _ => {}
         }
         for key in keys {
-            self.system.storage.remove(ext_id, area, &key).map_err(|err| err.to_string())?;
+            self.system
+                .storage
+                .remove(ext_id, area, &key)
+                .map_err(|err| err.to_string())?;
         }
         Ok(())
     }
@@ -414,12 +485,19 @@ impl ExtensionBridge {
 
     fn tabs_query(&self, query: Option<&serde_json::Value>) -> serde_json::Value {
         let tabs = self.all_tabs();
-        let active_only = query.and_then(|q| q.get("active")).and_then(|v| v.as_bool()).unwrap_or(false);
+        let active_only = query
+            .and_then(|q| q.get("active"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
         let url_pattern = query.and_then(|q| q.get("url")).and_then(|v| v.as_str());
         let matched: Vec<serde_json::Value> = tabs
             .into_iter()
             .filter(|tab| !active_only || tab.active)
-            .filter(|tab| url_pattern.map(|pattern| url_matches(pattern, &tab.url)).unwrap_or(true))
+            .filter(|tab| {
+                url_pattern
+                    .map(|pattern| url_matches(pattern, &tab.url))
+                    .unwrap_or(true)
+            })
             .map(|tab| tab_value(&tab))
             .collect();
         serde_json::Value::Array(matched)
@@ -454,7 +532,11 @@ impl ExtensionBridge {
     }
 
     fn all_tabs(&self) -> Vec<ExtensionTab> {
-        self.tabs.borrow().as_ref().map(|tabs| tabs()).unwrap_or_default()
+        self.tabs
+            .borrow()
+            .as_ref()
+            .map(|tabs| tabs())
+            .unwrap_or_default()
     }
 
     fn active_tab(&self) -> Option<ExtensionTab> {
@@ -467,7 +549,9 @@ impl ExtensionBridge {
     }
 
     fn extension(&self, ext_id: &str) -> Option<ExtensionInfo> {
-        self.system.manager.get_extension(&ExtensionId::new(ext_id.to_string()))
+        self.system
+            .manager
+            .get_extension(&ExtensionId::new(ext_id.to_string()))
     }
 
     fn enabled_extensions(&self) -> Vec<ExtensionInfo> {
@@ -492,9 +576,13 @@ pub fn extension_image(info: &ExtensionInfo, px: i32) -> gtk4::Image {
 
 pub fn toolbar_icon(is_dark: bool) -> Option<gdk4::Texture> {
     let bytes = if is_dark {
-        glib::Bytes::from_static(include_bytes!("../../../../assets/icons/brunya-extensions-white.svg"))
+        glib::Bytes::from_static(include_bytes!(
+            "../../../../assets/icons/brunya-extensions-white.svg"
+        ))
     } else {
-        glib::Bytes::from_static(include_bytes!("../../../../assets/icons/brunya-extensions.svg"))
+        glib::Bytes::from_static(include_bytes!(
+            "../../../../assets/icons/brunya-extensions.svg"
+        ))
     };
     gdk4::Texture::from_bytes(&bytes).ok()
 }
@@ -547,13 +635,17 @@ fn ptr_key(view: &WebView) -> String {
 fn register_extension_scheme(system: Arc<ExtensionSystem>) {
     static ONCE: Once = Once::new();
     ONCE.call_once(move || {
-        let Some(context) = webkit6::WebContext::default() else { return };
+        let Some(context) = webkit6::WebContext::default() else {
+            return;
+        };
         if let Some(security) = context.security_manager() {
             security.register_uri_scheme_as_secure("brunya-extension");
             security.register_uri_scheme_as_cors_enabled("brunya-extension");
             security.register_uri_scheme_as_local("brunya-extension");
         }
-        context.register_uri_scheme("brunya-extension", move |request| serve_extension_uri(&system, request));
+        context.register_uri_scheme("brunya-extension", move |request| {
+            serve_extension_uri(&system, request)
+        });
     });
 }
 
@@ -567,11 +659,17 @@ fn serve_extension_uri(system: &ExtensionSystem, request: &webkit6::URISchemeReq
         finish_error(request, "Extensão não indicada na URL");
         return;
     };
-    let Some(info) = system.manager.get_extension(&ExtensionId::new(ext_id.to_string())) else {
+    let Some(info) = system
+        .manager
+        .get_extension(&ExtensionId::new(ext_id.to_string()))
+    else {
         finish_error(request, "Extensão não instalada");
         return;
     };
-    if !matches!(info.state, ExtensionState::Active | ExtensionState::DeveloperMode) {
+    if !matches!(
+        info.state,
+        ExtensionState::Active | ExtensionState::DeveloperMode
+    ) {
         finish_error(request, "Extensão desativada");
         return;
     }
@@ -581,7 +679,11 @@ fn serve_extension_uri(system: &ExtensionSystem, request: &webkit6::URISchemeReq
         return;
     }
     if path == "_brunya/polyfill.js" {
-        finish_bytes(request, polyfill_source(&info, "page").into_bytes(), "text/javascript");
+        finish_bytes(
+            request,
+            polyfill_source(&info, "page").into_bytes(),
+            "text/javascript",
+        );
         return;
     }
     if path == "_brunya/background.html" {

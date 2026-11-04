@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Vulnerabilidade
+    url: https://github.com/Tsujiu/brunya-browser/security/policy
+    about: Não abra uma issue pública. Siga SECURITY.md.

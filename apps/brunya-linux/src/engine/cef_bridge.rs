@@ -10,7 +10,9 @@ pub struct CefBridge {
 
 impl CefBridge {
     pub fn new() -> Self {
-        Self { is_initialized: false }
+        Self {
+            is_initialized: false,
+        }
     }
 
     pub fn initialize(&mut self) -> Result<(), String> {

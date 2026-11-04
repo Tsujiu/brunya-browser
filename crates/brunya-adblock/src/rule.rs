@@ -41,9 +41,9 @@ pub struct ParsedRule {
     pub raw: String,
     pub kind: RuleKind,
     pub pattern: String,
-    pub domain_anchor: bool,   // Começa com ||
-    pub start_anchor: bool,    // Começa com |
-    pub end_anchor: bool,      // Termina com |
+    pub domain_anchor: bool, // Começa com ||
+    pub start_anchor: bool,  // Começa com |
+    pub end_anchor: bool,    // Termina com |
     pub third_party: Option<bool>,
     pub resource_types: Option<HashSet<ResourceType>>,
     pub domains: Option<HashSet<String>>,
@@ -77,7 +77,11 @@ impl ParsedRule {
                 end_anchor: false,
                 third_party: None,
                 resource_types: None,
-                domains: if domains.is_empty() { None } else { Some(domains) },
+                domains: if domains.is_empty() {
+                    None
+                } else {
+                    Some(domains)
+                },
                 excluded_domains: None,
             });
         }
@@ -96,23 +100,26 @@ impl ParsedRule {
         };
 
         // Analisar âncoras no corpo da regra
-        let (domain_anchor, body_after_anchor) = if let Some(stripped) = rule_body.strip_prefix("||") {
-            (true, stripped)
-        } else {
-            (false, rule_body)
-        };
+        let (domain_anchor, body_after_anchor) =
+            if let Some(stripped) = rule_body.strip_prefix("||") {
+                (true, stripped)
+            } else {
+                (false, rule_body)
+            };
 
-        let (start_anchor, body_after_start) = if !domain_anchor && body_after_anchor.starts_with('|') {
-            (true, &body_after_anchor[1..])
-        } else {
-            (false, body_after_anchor)
-        };
+        let (start_anchor, body_after_start) =
+            if !domain_anchor && body_after_anchor.starts_with('|') {
+                (true, &body_after_anchor[1..])
+            } else {
+                (false, body_after_anchor)
+            };
 
-        let (end_anchor, pattern) = if body_after_start.ends_with('|') && !body_after_start.ends_with("||") {
-            (true, &body_after_start[..body_after_start.len() - 1])
-        } else {
-            (false, body_after_start)
-        };
+        let (end_anchor, pattern) =
+            if body_after_start.ends_with('|') && !body_after_start.ends_with("||") {
+                (true, &body_after_start[..body_after_start.len() - 1])
+            } else {
+                (false, body_after_start)
+            };
 
         let mut third_party = None;
         let mut resource_types = HashSet::new();
@@ -143,15 +150,31 @@ impl ParsedRule {
 
         Some(ParsedRule {
             raw: trimmed.to_string(),
-            kind: if is_whitelist { RuleKind::Whitelist } else { RuleKind::Network },
+            kind: if is_whitelist {
+                RuleKind::Whitelist
+            } else {
+                RuleKind::Network
+            },
             pattern: pattern.to_lowercase(),
             domain_anchor,
             start_anchor,
             end_anchor,
             third_party,
-            resource_types: if resource_types.is_empty() { None } else { Some(resource_types) },
-            domains: if domains.is_empty() { None } else { Some(domains) },
-            excluded_domains: if excluded_domains.is_empty() { None } else { Some(excluded_domains) },
+            resource_types: if resource_types.is_empty() {
+                None
+            } else {
+                Some(resource_types)
+            },
+            domains: if domains.is_empty() {
+                None
+            } else {
+                Some(domains)
+            },
+            excluded_domains: if excluded_domains.is_empty() {
+                None
+            } else {
+                Some(excluded_domains)
+            },
         })
     }
 
@@ -256,7 +279,11 @@ mod tests {
         assert!(rule.domain_anchor);
         assert_eq!(rule.pattern, "doubleclick.net^");
         assert_eq!(rule.third_party, Some(true));
-        assert!(rule.resource_types.as_ref().unwrap().contains(&ResourceType::Script));
+        assert!(rule
+            .resource_types
+            .as_ref()
+            .unwrap()
+            .contains(&ResourceType::Script));
 
         // Testar match
         assert!(rule.matches(

@@ -154,35 +154,53 @@ impl ExtensionStorageManager {
     }
 
     /// Obtém o valor de uma chave no armazenamento de uma extensão.
-    pub fn get(&self, ext_id: &ExtensionId, area: StorageArea, key: &str) -> Option<serde_json::Value> {
+    pub fn get(
+        &self,
+        ext_id: &ExtensionId,
+        area: StorageArea,
+        key: &str,
+    ) -> Option<serde_json::Value> {
         let mut stores = self.stores.write();
-        let store = stores.entry(ext_id.0.clone())
+        let store = stores
+            .entry(ext_id.0.clone())
             .or_insert_with(|| self.load_store(ext_id));
         store.get_area(area).items.get(key).cloned()
     }
 
     /// Define um valor no armazenamento de uma extensão.
-    pub fn set(&self, ext_id: &ExtensionId, area: StorageArea, key: String, value: serde_json::Value) -> Result<bool> {
+    pub fn set(
+        &self,
+        ext_id: &ExtensionId,
+        area: StorageArea,
+        key: String,
+        value: serde_json::Value,
+    ) -> Result<bool> {
         let quota = ExtensionStore::quota_for(area);
         let mut stores = self.stores.write();
-        let store = stores.entry(ext_id.0.clone())
+        let store = stores
+            .entry(ext_id.0.clone())
             .or_insert_with(|| self.load_store(ext_id));
 
         let area_data = store.get_area_mut(area);
 
         // Verificar cota
         let new_size = estimate_json_size(&value) as u64;
-        let current_total: u64 = area_data.items.values()
+        let current_total: u64 = area_data
+            .items
+            .values()
             .map(|v| estimate_json_size(v) as u64)
             .sum();
-        let old_size = area_data.items.get(&key)
+        let old_size = area_data
+            .items
+            .get(&key)
             .map(|v| estimate_json_size(v) as u64)
             .unwrap_or(0);
 
         if current_total - old_size + new_size > quota {
-            return Err(ExtensionError::StorageError(
-                format!("Quota excedida para área {:?}: {} bytes", area, quota),
-            ));
+            return Err(ExtensionError::StorageError(format!(
+                "Quota excedida para área {:?}: {} bytes",
+                area, quota
+            )));
         }
 
         area_data.items.insert(key, value);
@@ -193,7 +211,8 @@ impl ExtensionStorageManager {
     /// Remove uma chave do armazenamento.
     pub fn remove(&self, ext_id: &ExtensionId, area: StorageArea, key: &str) -> Result<bool> {
         let mut stores = self.stores.write();
-        let store = stores.entry(ext_id.0.clone())
+        let store = stores
+            .entry(ext_id.0.clone())
             .or_insert_with(|| self.load_store(ext_id));
 
         let removed = store.get_area_mut(area).items.remove(key).is_some();
@@ -206,7 +225,8 @@ impl ExtensionStorageManager {
     /// Limpa todo o armazenamento de uma área.
     pub fn clear(&self, ext_id: &ExtensionId, area: StorageArea) -> Result<()> {
         let mut stores = self.stores.write();
-        let store = stores.entry(ext_id.0.clone())
+        let store = stores
+            .entry(ext_id.0.clone())
             .or_insert_with(|| self.load_store(ext_id));
 
         store.get_area_mut(area).items.clear();
@@ -215,7 +235,11 @@ impl ExtensionStorageManager {
     }
 
     /// Obtém todas as chaves e valores de uma área.
-    pub fn get_all(&self, ext_id: &ExtensionId, area: StorageArea) -> HashMap<String, serde_json::Value> {
+    pub fn get_all(
+        &self,
+        ext_id: &ExtensionId,
+        area: StorageArea,
+    ) -> HashMap<String, serde_json::Value> {
         let stores = self.stores.read();
         if let Some(store) = stores.get(&ext_id.0) {
             store.get_area(area).items.clone()
@@ -228,11 +252,15 @@ impl ExtensionStorageManager {
     /// Retorna a quantidade de bytes usados em uma área.
     pub fn get_bytes_in_use(&self, ext_id: &ExtensionId, area: StorageArea) -> u64 {
         let stores = self.stores.read();
-        let store = stores.get(&ext_id.0)
+        let store = stores
+            .get(&ext_id.0)
             .cloned()
             .unwrap_or_else(|| self.load_store(ext_id));
 
-        store.get_area(area).items.values()
+        store
+            .get_area(area)
+            .items
+            .values()
             .map(|v| estimate_json_size(v) as u64)
             .sum()
     }
@@ -278,12 +306,30 @@ mod tests {
         let ext_id = ExtensionId("test-ext".to_string());
 
         // Set
-        mgr.set(&ext_id, StorageArea::Local, "key1".to_string(), serde_json::json!("value1")).unwrap();
-        mgr.set(&ext_id, StorageArea::Local, "key2".to_string(), serde_json::json!(42)).unwrap();
+        mgr.set(
+            &ext_id,
+            StorageArea::Local,
+            "key1".to_string(),
+            serde_json::json!("value1"),
+        )
+        .unwrap();
+        mgr.set(
+            &ext_id,
+            StorageArea::Local,
+            "key2".to_string(),
+            serde_json::json!(42),
+        )
+        .unwrap();
 
         // Get
-        assert_eq!(mgr.get(&ext_id, StorageArea::Local, "key1"), Some(serde_json::json!("value1")));
-        assert_eq!(mgr.get(&ext_id, StorageArea::Local, "key2"), Some(serde_json::json!(42)));
+        assert_eq!(
+            mgr.get(&ext_id, StorageArea::Local, "key1"),
+            Some(serde_json::json!("value1"))
+        );
+        assert_eq!(
+            mgr.get(&ext_id, StorageArea::Local, "key2"),
+            Some(serde_json::json!(42))
+        );
 
         // Remove
         mgr.remove(&ext_id, StorageArea::Local, "key1").unwrap();
@@ -302,7 +348,13 @@ mod tests {
         let ext_a = ExtensionId("ext-a".to_string());
         let ext_b = ExtensionId("ext-b".to_string());
 
-        mgr.set(&ext_a, StorageArea::Local, "secret".to_string(), serde_json::json!("A-data")).unwrap();
+        mgr.set(
+            &ext_a,
+            StorageArea::Local,
+            "secret".to_string(),
+            serde_json::json!("A-data"),
+        )
+        .unwrap();
 
         // B não deve ver os dados de A
         assert_eq!(mgr.get(&ext_b, StorageArea::Local, "secret"), None);
@@ -316,7 +368,13 @@ mod tests {
         {
             let mgr = ExtensionStorageManager::new(store_path.clone());
             let ext_id = ExtensionId("sess-ext".to_string());
-            mgr.set(&ext_id, StorageArea::Session, "temp".to_string(), serde_json::json!("temporary")).unwrap();
+            mgr.set(
+                &ext_id,
+                StorageArea::Session,
+                "temp".to_string(),
+                serde_json::json!("temporary"),
+            )
+            .unwrap();
         }
 
         // Session storage não deve persistir entre reinicializações

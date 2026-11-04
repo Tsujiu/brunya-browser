@@ -88,10 +88,13 @@ impl BrowserHeader {
             .build();
 
         // Carregar as duas versões do escudo oficial: branco para modo escuro, preto para modo claro
-        let white_bytes = glib::Bytes::from_static(include_bytes!("../../../../assets/icons/brunya-shield-white.svg"));
+        let white_bytes = glib::Bytes::from_static(include_bytes!(
+            "../../../../assets/icons/brunya-shield-white.svg"
+        ));
         let shield_white_tex = gdk4::Texture::from_bytes(&white_bytes).ok();
 
-        let black_bytes = glib::Bytes::from_static(include_bytes!("../../../../assets/icons/brunya-shield.svg"));
+        let black_bytes =
+            glib::Bytes::from_static(include_bytes!("../../../../assets/icons/brunya-shield.svg"));
         let shield_black_tex = gdk4::Texture::from_bytes(&black_bytes).ok();
 
         let shield_btn = Button::builder()
@@ -161,8 +164,16 @@ impl BrowserHeader {
         let extension_actions = GtkBox::new(Orientation::Horizontal, 2);
 
         let theme_toggle_btn = Button::builder()
-            .icon_name(if initial_dark { "display-brightness-symbolic" } else { "weather-clear-night-symbolic" })
-            .tooltip_text(if initial_dark { "Mudar para tema claro" } else { "Mudar para tema escuro" })
+            .icon_name(if initial_dark {
+                "display-brightness-symbolic"
+            } else {
+                "weather-clear-night-symbolic"
+            })
+            .tooltip_text(if initial_dark {
+                "Mudar para tema claro"
+            } else {
+                "Mudar para tema escuro"
+            })
             .css_classes(["flat", "circular", "nav-btn"])
             .build();
 
@@ -219,8 +230,10 @@ impl BrowserHeader {
             if let Some(ref tex) = self.extensions_white_tex {
                 self.extensions_icon.set_paintable(Some(tex));
             }
-            self.theme_toggle_btn.set_icon_name("display-brightness-symbolic");
-            self.theme_toggle_btn.set_tooltip_text(Some("Mudar para tema claro"));
+            self.theme_toggle_btn
+                .set_icon_name("display-brightness-symbolic");
+            self.theme_toggle_btn
+                .set_tooltip_text(Some("Mudar para tema claro"));
         } else {
             if let Some(ref tex) = self.shield_black_tex {
                 self.shield_icon.set_paintable(Some(tex));
@@ -228,8 +241,10 @@ impl BrowserHeader {
             if let Some(ref tex) = self.extensions_black_tex {
                 self.extensions_icon.set_paintable(Some(tex));
             }
-            self.theme_toggle_btn.set_icon_name("weather-clear-night-symbolic");
-            self.theme_toggle_btn.set_tooltip_text(Some("Mudar para tema escuro"));
+            self.theme_toggle_btn
+                .set_icon_name("weather-clear-night-symbolic");
+            self.theme_toggle_btn
+                .set_tooltip_text(Some("Mudar para tema escuro"));
         }
     }
 
