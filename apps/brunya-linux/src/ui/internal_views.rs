@@ -1615,9 +1615,13 @@ where
     actions_box.set_margin_top(12);
     actions_box.set_margin_bottom(8);
 
+    let open_store_btn = Button::builder()
+        .label(&t!("extensions.open_store"))
+        .css_classes(["settings-pill", "suggested-action"])
+        .build();
     let load_unpacked_btn = Button::builder()
         .label(&t!("extensions.load_unpacked"))
-        .css_classes(["settings-pill", "suggested-action"])
+        .css_classes(["settings-pill"])
         .build();
     let check_updates_btn = Button::builder()
         .label(&t!("extensions.check_updates"))
@@ -1628,6 +1632,12 @@ where
         .css_classes(["settings-pill"])
         .build();
 
+    let on_open_store = on_navigate.clone();
+    open_store_btn.connect_clicked(move |_| {
+        on_open_store("https://chromewebstore.google.com/category/extensions");
+    });
+
+    actions_box.append(&open_store_btn);
     actions_box.append(&load_unpacked_btn);
     actions_box.append(&file_btn);
     actions_box.append(&check_updates_btn);
@@ -1858,64 +1868,32 @@ where
     let entry_store = store_entry.clone();
     store_btn.connect_clicked(move |btn| {
         let query = entry_store.text().to_string();
-        let request = match parse_store_input(&query) {
-            Ok(request) => request,
-            Err(err) => {
-                status_store.set_label(&err.to_string());
-                return;
-            }
-        };
-        status_store.set_label(&t!("extensions.store_installing"));
         btn.set_sensitive(false);
-        let btn = btn.clone();
+        let button = btn.clone();
         let status = status_store.clone();
+        let status_done = status.clone();
         let system = ext_sys_store.clone();
         let rebuild = rebuild_store.clone();
         let on_changed = on_changed_store.clone();
-        let (sender, receiver) = std::sync::mpsc::channel();
-        std::thread::spawn(move || {
-            let _ = sender.send(download_store_package(&request));
-        });
-        glib::timeout_add_local(std::time::Duration::from_millis(150), move || {
-            match receiver.try_recv() {
-                Ok(downloaded) => {
-                    btn.set_sensitive(true);
-                    let parent = btn.root().and_then(|root| root.downcast::<gtk4::Window>().ok());
-                    match downloaded {
-                        Ok(package) => {
-                            let detail = permission_text(&package.preview, &package.store_name);
-                            let title = t!("extensions.install_confirm_title");
-                            let system = system.clone();
-                            let status = status.clone();
-                            let on_changed = on_changed.clone();
-                            let rebuild = rebuild.clone();
-                            confirm_install(parent, title, detail, move || {
-                                match system.manager.install_from_bytes(
-                                    &package.bytes,
-                                    Some(&package.preview.id),
-                                    InstallType::FromStore,
-                                ) {
-                                    Ok(info) => {
-                                        status.set_label(&t!("extensions.extension_installed"));
-                                        on_changed(&format!("installed:{}", info.id.0));
-                                        if let Some(ref refresh) = *rebuild.borrow() { refresh(); }
-                                    }
-                                    Err(err) => status.set_label(&err.to_string()),
-                                }
-                            });
+        begin_store_install(
+            query,
+            btn,
+            system,
+            move |text| status.set_label(&text),
+            move |end| {
+                button.set_sensitive(true);
+                match end {
+                    StoreInstallEnd::Installed(id) => {
+                        on_changed(&format!("installed:{id}"));
+                        if let Some(ref refresh) = *rebuild.borrow() {
+                            refresh();
                         }
-                        Err(err) => status.set_label(&err.to_string()),
                     }
-                    glib::ControlFlow::Break
+                    StoreInstallEnd::Cancelled => status_done.set_label(&t!("extensions.store_hint")),
+                    StoreInstallEnd::Failed => {}
                 }
-                Err(std::sync::mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
-                Err(std::sync::mpsc::TryRecvError::Disconnected) => {
-                    btn.set_sensitive(true);
-                    status.set_label(&t!("extensions.extension_error"));
-                    glib::ControlFlow::Break
-                }
-            }
-        });
+            },
+        );
     });
 
     let ext_sys_file = ext_system.clone();
@@ -1968,7 +1946,7 @@ where
                             }
                             Err(err) => status.set_label(&err.to_string()),
                         }
-                    });
+                    }, || {});
                 });
             }
         }
@@ -1983,6 +1961,90 @@ where
         .css_classes(["settings-page"])
         .build();
     scroll.upcast()
+}
+
+/// Resultado do download de uma extensão a partir de uma loja.
+pub enum StoreInstallEnd {
+    Installed(String),
+    Cancelled,
+    Failed,
+}
+
+/// Baixa o pacote da loja, pede confirmação das permissões e instala.
+pub fn begin_store_install<S, F, W>(
+    query: String,
+    anchor: &W,
+    system: Arc<ExtensionSystem>,
+    on_status: S,
+    on_finished: F,
+) where
+    S: Fn(String) + 'static,
+    F: Fn(StoreInstallEnd) + 'static,
+    W: IsA<gtk4::Widget> + Clone,
+{
+    let request = match parse_store_input(&query) {
+        Ok(request) => request,
+        Err(err) => {
+            on_status(err.to_string());
+            on_finished(StoreInstallEnd::Failed);
+            return;
+        }
+    };
+    on_status(t!("extensions.store_installing"));
+    let on_status = Rc::new(on_status);
+    let on_finished = Rc::new(on_finished);
+    let anchor = W::clone(anchor).upcast::<gtk4::Widget>();
+    let (sender, receiver) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = sender.send(download_store_package(&request));
+    });
+    glib::timeout_add_local(std::time::Duration::from_millis(150), move || {
+        match receiver.try_recv() {
+            Ok(Ok(package)) => {
+                let detail = permission_text(&package.preview, &package.store_name);
+                let title = t!("extensions.install_confirm_title");
+                let parent = anchor.root().and_then(|root| root.downcast::<gtk4::Window>().ok());
+                let bytes = package.bytes;
+                let extension_id = package.preview.id;
+                let system = system.clone();
+                let on_status_ok = Rc::clone(&on_status);
+                let on_finished_ok = Rc::clone(&on_finished);
+                let on_finished_cancel = Rc::clone(&on_finished);
+                confirm_install(
+                    parent,
+                    title,
+                    detail,
+                    move || match system.manager.install_from_bytes(
+                        &bytes,
+                        Some(&extension_id),
+                        InstallType::FromStore,
+                    ) {
+                        Ok(info) => {
+                            (&*on_status_ok)(t!("extensions.extension_installed"));
+                            (&*on_finished_ok)(StoreInstallEnd::Installed(info.id.0));
+                        }
+                        Err(err) => {
+                            (&*on_status_ok)(err.to_string());
+                            (&*on_finished_ok)(StoreInstallEnd::Failed);
+                        }
+                    },
+                    move || (&*on_finished_cancel)(StoreInstallEnd::Cancelled),
+                );
+                glib::ControlFlow::Break
+            }
+            Ok(Err(err)) => {
+                (&*on_status)(err.to_string());
+                (&*on_finished)(StoreInstallEnd::Failed);
+                glib::ControlFlow::Break
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                (&*on_status)(t!("extensions.extension_error"));
+                (&*on_finished)(StoreInstallEnd::Failed);
+                glib::ControlFlow::Break
+            }
+        }
+    });
 }
 
 fn permission_text(preview: &brunya_extensions::loader::PackagePreview, source: &str) -> String {
@@ -2013,6 +2075,7 @@ fn confirm_install(
     title: String,
     detail: String,
     on_accept: impl FnOnce() + 'static,
+    on_cancel: impl FnOnce() + 'static,
 ) {
     let cancel = t!("extensions.install_cancel");
     let accept = t!("extensions.install_accept");
@@ -2027,6 +2090,8 @@ fn confirm_install(
     dialog.choose(parent.as_ref(), None::<&gio::Cancellable>, move |response| {
         if response == Ok(1) {
             on_accept();
+        } else {
+            on_cancel();
         }
     });
 }
