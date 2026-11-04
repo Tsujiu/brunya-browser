@@ -14,6 +14,7 @@ pub enum ResourceType {
 }
 
 impl ResourceType {
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "script" => Some(ResourceType::Script),
@@ -231,16 +232,12 @@ impl ParsedRule {
             return false;
         }
 
-        if self.start_anchor {
-            if !url_lower.starts_with(&self.pattern) {
-                return false;
-            }
+        if self.start_anchor && !url_lower.starts_with(&self.pattern) {
+            return false;
         }
 
-        if self.end_anchor {
-            if !url_lower.ends_with(&self.pattern) {
-                return false;
-            }
+        if self.end_anchor && !url_lower.ends_with(&self.pattern) {
+            return false;
         }
 
         let clean_pattern = self.pattern.trim_matches('^');

@@ -34,8 +34,18 @@ pub extern "C" fn shield_initialize() -> bool {
 }
 
 /// Avalia se uma requisição de rede deve ser bloqueada pelo Shield.
+///
+/// # Safety
+///
+/// `url` e `source_domain` são ponteiros C. `url` nulo faz a função
+/// devolver falso. `source_domain` pode ser nulo. Os ponteiros não nulos
+/// precisam apontar para texto UTF-8 terminado em nul que permaneça válido
+/// durante a chamada.
 #[no_mangle]
-pub extern "C" fn shield_check_request(url: *const c_char, source_domain: *const c_char) -> bool {
+pub unsafe extern "C" fn shield_check_request(
+    url: *const c_char,
+    source_domain: *const c_char,
+) -> bool {
     catch_unwind(|| {
         if url.is_null() {
             return false;
@@ -72,8 +82,13 @@ pub extern "C" fn shield_get_cosmetic_rules() -> *const c_char {
 }
 
 /// Libera uma string alocada por `shield_get_cosmetic_rules`.
+///
+/// # Safety
+///
+/// `s` é nulo ou foi obtido de `shield_get_cosmetic_rules` e ainda não foi
+/// liberado. Outro ponteiro não pode ser passado.
 #[no_mangle]
-pub extern "C" fn shield_free_string(s: *mut c_char) {
+pub unsafe extern "C" fn shield_free_string(s: *mut c_char) {
     if !s.is_null() {
         let _ = catch_unwind(|| unsafe {
             let _ = CString::from_raw(s);
@@ -99,8 +114,13 @@ pub extern "C" fn shield_set_profile(profile_code: i32) -> bool {
 }
 
 /// Adiciona uma exceção para o domínio informado.
+///
+/// # Safety
+///
+/// `domain` é nulo ou aponta para texto UTF-8 terminado em nul, válido
+/// durante a chamada.
 #[no_mangle]
-pub extern "C" fn shield_add_site_exception(domain: *const c_char) -> bool {
+pub unsafe extern "C" fn shield_add_site_exception(domain: *const c_char) -> bool {
     catch_unwind(|| {
         if domain.is_null() {
             return false;
