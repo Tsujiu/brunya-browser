@@ -28,7 +28,7 @@ pub struct UpdateInfo {
 pub struct UpdateManager {
     base_path: PathBuf,
     registry: Arc<ExtensionRegistry>,
-    security: Arc<SecurityManager>,
+    _security: Arc<SecurityManager>,
     update_check_interval: Duration,
     last_check: RwLock<Option<Instant>>,
 }
@@ -43,7 +43,7 @@ impl UpdateManager {
         Self {
             base_path,
             registry,
-            security,
+            _security: security,
             update_check_interval: Duration::from_secs(3600), // 1 hora
             last_check: RwLock::new(None),
         }
@@ -75,14 +75,19 @@ impl UpdateManager {
     /// Verifica atualização para uma extensão específica.
     pub fn check_single_update(&self, ext: &crate::types::ExtensionInfo) -> UpdateInfo {
         // Determinar URL de update (update_url do manifest ou padrão Chrome Web Store)
-        let update_url = ext.homepage_url.clone()
+        let update_url = ext
+            .homepage_url
+            .clone()
             .or_else(|| Some(format!("https://clients2.google.com/service/update2/crx")));
 
         let available_version = if let Some(ref url) = update_url {
             match self.query_update_server(url, &ext.id, &ext.version) {
                 Ok(version) => {
                     if version != ext.version {
-                        info!("Atualização disponível para {}: {} → {}", ext.name, ext.version, version);
+                        info!(
+                            "Atualização disponível para {}: {} → {}",
+                            ext.name, ext.version, version
+                        );
                         Some(version)
                     } else {
                         None
@@ -109,16 +114,23 @@ impl UpdateManager {
 
     /// Baixa e aplica uma atualização.
     pub fn apply_update(&self, update: &UpdateInfo) -> Result<bool> {
-        let available = update.available_version.as_ref()
-            .ok_or_else(|| ExtensionError::UpdateError("Nenhuma atualização disponível".to_string()))?;
+        let available = update.available_version.as_ref().ok_or_else(|| {
+            ExtensionError::UpdateError("Nenhuma atualização disponível".to_string())
+        })?;
 
-        let ext_info = self.registry.get(&update.ext_id)
+        let ext_info = self
+            .registry
+            .get(&update.ext_id)
             .ok_or_else(|| ExtensionError::NotFound(update.ext_id.0.clone()))?;
 
-        let _update_url = update.update_url.as_ref()
-            .ok_or_else(|| ExtensionError::UpdateError("URL de atualização não disponível".to_string()))?;
+        let _update_url = update.update_url.as_ref().ok_or_else(|| {
+            ExtensionError::UpdateError("URL de atualização não disponível".to_string())
+        })?;
 
-        info!("Aplicando atualização para {}: v{} → v{}", ext_info.name, ext_info.version, available);
+        info!(
+            "Aplicando atualização para {}: v{} → v{}",
+            ext_info.name, ext_info.version, available
+        );
 
         // Baixar pacote de atualização
         let download_dir = self.base_path.join(&update.ext_id.0);
@@ -132,7 +144,8 @@ impl UpdateManager {
 
         // Atualizar versão no registro
         let version_dir = download_dir.join(available);
-        self.registry.update_version(&update.ext_id, available, version_dir)?;
+        self.registry
+            .update_version(&update.ext_id, available, version_dir)?;
 
         info!("Extensão {} atualizada para v{}", ext_info.name, available);
         Ok(true)
@@ -151,7 +164,12 @@ impl UpdateManager {
     }
 
     /// Consulta o servidor de atualização (simulado para CWS).
-    fn query_update_server(&self, _url: &str, _ext_id: &ExtensionId, _current_version: &str) -> std::result::Result<String, String> {
+    fn query_update_server(
+        &self,
+        _url: &str,
+        _ext_id: &ExtensionId,
+        _current_version: &str,
+    ) -> std::result::Result<String, String> {
         // Em uma implementação real, faria uma requisição HTTP para a URL de update
         // e processaria a resposta XML (protocolo Omaha/CUP)
         //
@@ -159,10 +177,10 @@ impl UpdateManager {
         Err("Servidor de atualização não implementado no polyfill".to_string())
     }
 
-    /// Verifica a assinatura de um pacote de atualização.
+    /// Reserva a conferência de assinatura do pacote de atualização.
+    /// Ainda não entra no fluxo: a implementação atual aceitaria qualquer pacote.
+    #[allow(dead_code)]
     fn verify_update_signature(_data: &[u8], _expected_public_key: &str) -> bool {
-        // TODO: Implementar verificação de assinatura RSA/PSS
-        // Conforme protocolo de atualização do Chromium
         true
     }
 }
@@ -172,8 +190,7 @@ mod tests {
     use super::*;
     use crate::registry::ExtensionRegistry;
     use crate::security::SecurityManager;
-    use crate::types::{ExtensionInfo, ExtensionState, InstallType};
-    use std::path::PathBuf;
+    use crate::types::ExtensionInfo;
     use std::sync::Arc;
 
     #[test]
@@ -181,11 +198,7 @@ mod tests {
         let dir = tempfile::TempDir::new().unwrap();
         let registry = Arc::new(ExtensionRegistry::new(dir.path().join("reg")));
         let security = Arc::new(SecurityManager::new());
-        let updater = UpdateManager::new(
-            dir.path().join("updates"),
-            registry.clone(),
-            security,
-        );
+        let updater = UpdateManager::new(dir.path().join("updates"), registry.clone(), security);
 
         // Registrar extensão
         let info = ExtensionInfo {

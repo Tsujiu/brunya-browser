@@ -1,3 +1,5 @@
+use crate::engine::extension_host::ExtensionBridge;
+use crate::engine::FaviconManager;
 use brunya_adblock::AdblockEngine;
 use brunya_core::traits::NetworkInterceptor;
 use brunya_core::types::{NavigationState, SecurityLevel, TabId};
@@ -16,8 +18,6 @@ use std::sync::Arc;
 use tracing::{info, warn};
 use webkit6::prelude::*;
 use webkit6::{LoadEvent, NetworkSession, WebView as WebKitWebView};
-use crate::engine::extension_host::ExtensionBridge;
-use crate::engine::FaviconManager;
 
 pub struct WebView {
     pub container: GtkBox,
@@ -59,10 +59,7 @@ impl WebView {
         container.set_vexpand(true);
         container.set_hexpand(true);
 
-        let progress_bar = ProgressBar::builder()
-            .fraction(0.0)
-            .visible(false)
-            .build();
+        let progress_bar = ProgressBar::builder().fraction(0.0).visible(false).build();
         container.append(&progress_bar);
 
         let store_bar = GtkBox::new(Orientation::Horizontal, 12);
@@ -141,7 +138,8 @@ impl WebView {
             content_manager.add_style_sheet(&user_style);
 
             // Injetar scriptlet nativo de bloqueio de anúncios e telemetria do YouTube (Módulo 10)
-            let yt_script_code = include_str!("../../../../crates/brunya-adblock/resources/youtube_adblock.js");
+            let yt_script_code =
+                include_str!("../../../../crates/brunya-adblock/resources/youtube_adblock.js");
             let yt_user_script = webkit6::UserScript::new(
                 yt_script_code,
                 webkit6::UserContentInjectedFrames::AllFrames,
@@ -192,8 +190,16 @@ impl WebView {
             });
         }
 
-        let default_start = if is_private { "brunya://private" } else { "brunya://newtab" };
-        let default_title = if is_private { t!("common.private_window_title") } else { t!("common.new_tab") };
+        let default_start = if is_private {
+            "brunya://private"
+        } else {
+            "brunya://newtab"
+        };
+        let default_title = if is_private {
+            t!("common.private_window_title")
+        } else {
+            t!("common.new_tab")
+        };
 
         let initial_state = NavigationState {
             url: default_start.to_string(),
@@ -313,56 +319,60 @@ impl WebView {
         // 4. Mudança de carregamento
         let pb_load = progress_bar.clone();
         let this_load = Rc::downgrade(&view);
-        webkit_view.connect_load_changed(move |v, event| {
-            match event {
-                LoadEvent::Started => {
-                    pb_load.set_visible(true);
-                    if let Some(this) = this_load.upgrade() {
-                        this.is_loading.store(true, Ordering::SeqCst);
-                        if let Some(bridge) = &this.extension_bridge {
-                            bridge.reset_injection(&this.webkit_view);
-                        }
-                        let mut state = this.current_state.borrow_mut();
-                        state.is_loading = true;
-                        state.can_go_back = v.can_go_back();
-                        state.can_go_forward = v.can_go_forward();
-                        (this.on_state_changed)(&state);
+        webkit_view.connect_load_changed(move |v, event| match event {
+            LoadEvent::Started => {
+                pb_load.set_visible(true);
+                if let Some(this) = this_load.upgrade() {
+                    this.is_loading.store(true, Ordering::SeqCst);
+                    if let Some(bridge) = &this.extension_bridge {
+                        bridge.reset_injection(&this.webkit_view);
                     }
+                    let mut state = this.current_state.borrow_mut();
+                    state.is_loading = true;
+                    state.can_go_back = v.can_go_back();
+                    state.can_go_forward = v.can_go_forward();
+                    (this.on_state_changed)(&state);
                 }
-                LoadEvent::Committed => {
-                    if let Some(this) = this_load.upgrade() {
-                        if let Some(uri) = v.uri() {
-                            this.sync_store_offer(uri.as_str());
-                            if let Some(bridge) = this.extension_bridge.clone() {
-                                bridge.inject_content(&this.webkit_view, uri.as_str(), "document_start");
-                                bridge.inject_content(&this.webkit_view, uri.as_str(), "document_end");
-                            }
-                        }
-                    }
-                }
-                LoadEvent::Finished => {
-                    pb_load.set_visible(false);
-                    if let Some(this) = this_load.upgrade() {
-                        this.is_loading.store(false, Ordering::SeqCst);
-                        if let (Some(bridge), Some(uri)) = (this.extension_bridge.clone(), v.uri()) {
-                            bridge.inject_content(&this.webkit_view, uri.as_str(), "document_idle");
-                        }
-                        let mut state = this.current_state.borrow_mut();
-                        state.is_loading = false;
-                        state.can_go_back = v.can_go_back();
-                        state.can_go_forward = v.can_go_forward();
-                        (this.on_state_changed)(&state);
-                    }
-                }
-                _ => {}
             }
+            LoadEvent::Committed => {
+                if let Some(this) = this_load.upgrade() {
+                    if let Some(uri) = v.uri() {
+                        this.sync_store_offer(uri.as_str());
+                        if let Some(bridge) = this.extension_bridge.clone() {
+                            bridge.inject_content(
+                                &this.webkit_view,
+                                uri.as_str(),
+                                "document_start",
+                            );
+                            bridge.inject_content(&this.webkit_view, uri.as_str(), "document_end");
+                        }
+                    }
+                }
+            }
+            LoadEvent::Finished => {
+                pb_load.set_visible(false);
+                if let Some(this) = this_load.upgrade() {
+                    this.is_loading.store(false, Ordering::SeqCst);
+                    if let (Some(bridge), Some(uri)) = (this.extension_bridge.clone(), v.uri()) {
+                        bridge.inject_content(&this.webkit_view, uri.as_str(), "document_idle");
+                    }
+                    let mut state = this.current_state.borrow_mut();
+                    state.is_loading = false;
+                    state.can_go_back = v.can_go_back();
+                    state.can_go_forward = v.can_go_forward();
+                    (this.on_state_changed)(&state);
+                }
+            }
+            _ => {}
         });
 
         // 5. Interceptador de Adblock na política de navegação
         let ab_policy = adblock.clone();
         webkit_view.connect_decide_policy(move |_v, decision, decision_type| {
             if decision_type == webkit6::PolicyDecisionType::NavigationAction {
-                if let Some(nav_decision) = decision.downcast_ref::<webkit6::NavigationPolicyDecision>() {
+                if let Some(nav_decision) =
+                    decision.downcast_ref::<webkit6::NavigationPolicyDecision>()
+                {
                     if let Some(req) = nav_decision.navigation_action().and_then(|a| a.request()) {
                         if let Some(uri) = req.uri() {
                             if ab_policy.should_block(tab_id, uri.as_str(), None, None) {
@@ -435,8 +445,12 @@ impl WebView {
     }
 
     fn store_already_installed(&self, request: &StoreRequest) -> bool {
-        let Some(system) = &self.extension_system else { return false };
-        let Some(id) = request.explicit_id() else { return false };
+        let Some(system) = &self.extension_system else {
+            return false;
+        };
+        let Some(id) = request.explicit_id() else {
+            return false;
+        };
         system
             .manager
             .get_extension(&ExtensionId::new(id.to_string()))
@@ -447,8 +461,12 @@ impl WebView {
         if *self.store_busy.borrow() {
             return;
         }
-        let Some(url) = self.store_url.borrow().clone() else { return };
-        let Some(system) = self.extension_system.clone() else { return };
+        let Some(url) = self.store_url.borrow().clone() else {
+            return;
+        };
+        let Some(system) = self.extension_system.clone() else {
+            return;
+        };
         *self.store_busy.borrow_mut() = true;
         self.store_button.set_sensitive(false);
         let this_status = Rc::clone(self);
@@ -461,7 +479,10 @@ impl WebView {
             move |end| {
                 *this_done.store_busy.borrow_mut() = false;
                 this_done.store_button.set_sensitive(true);
-                if matches!(end, crate::ui::internal_views::StoreInstallEnd::Installed(_)) {
+                if matches!(
+                    end,
+                    crate::ui::internal_views::StoreInstallEnd::Installed(_)
+                ) {
                     (this_done.on_extensions_changed)("refresh");
                 }
                 if this_done.webkit_view.is_visible() {
@@ -477,8 +498,12 @@ impl WebView {
 
     fn on_store_message(self: &Rc<Self>, value: &webkit6::javascriptcore::Value) {
         let raw = script_message_text(value);
-        let Ok(msg) = serde_json::from_str::<serde_json::Value>(&raw) else { return };
-        let Some(url) = msg.get("url").and_then(|value| value.as_str()) else { return };
+        let Ok(msg) = serde_json::from_str::<serde_json::Value>(&raw) else {
+            return;
+        };
+        let Some(url) = msg.get("url").and_then(|value| value.as_str()) else {
+            return;
+        };
         if url.is_empty() {
             return;
         }
@@ -503,7 +528,10 @@ impl WebView {
         if stripped > 0 {
             clean_url = cleaned_url;
             self.adblock.stats().record_url_cleaned(stripped);
-            info!("BruNya Shield URL Cleaner removeu {} parâmetros de rastreamento", stripped);
+            info!(
+                "BruNya Shield URL Cleaner removeu {} parâmetros de rastreamento",
+                stripped
+            );
         }
 
         // 2. Módulo 03 — Threat Intelligence (detecção de phishing, malware e fraudes)
@@ -514,7 +542,9 @@ impl WebView {
                 if !self.adblock.is_site_allowed(&domain) {
                     self.render_threat_warning_page(
                         &clean_url,
-                        threat.category.unwrap_or(brunya_adblock::ThreatCategory::Malware),
+                        threat
+                            .category
+                            .unwrap_or(brunya_adblock::ThreatCategory::Malware),
                         &threat.reason,
                     );
                     return;
@@ -523,9 +553,14 @@ impl WebView {
         }
 
         // 3. Interceptação pelo Bloqueador de Anúncios e Rastreadores
-        let action = self.adblock.inspect_request(self.tab_id, &clean_url, "main_frame");
+        let action = self
+            .adblock
+            .inspect_request(self.tab_id, &clean_url, "main_frame");
         if let brunya_core::traits::RequestAction::Block { reason } = action {
-            warn!("Navegação bloqueada pelo Brunya Shield: {} ({})", clean_url, reason);
+            warn!(
+                "Navegação bloqueada pelo Brunya Shield: {} ({})",
+                clean_url, reason
+            );
             self.render_error_page(&clean_url, &reason);
             return;
         }
@@ -567,46 +602,57 @@ impl WebView {
         let (title, widget) = match url {
             "brunya://newtab" => {
                 let self_clone = self.clone();
-                (t!("common.new_tab"), crate::ui::internal_views::build_newtab_view(
-                    self.settings.clone(),
-                    self.storage.clone(),
-                    move |target| {
-                        self_clone.load_url(target);
-                    },
-                ))
+                (
+                    t!("common.new_tab"),
+                    crate::ui::internal_views::build_newtab_view(
+                        self.settings.clone(),
+                        self.storage.clone(),
+                        move |target| {
+                            self_clone.load_url(target);
+                        },
+                    ),
+                )
             }
             "brunya://settings" => {
                 let self_clone = self.clone();
-                (t!("common.settings"), crate::ui::internal_views::build_settings_view(
-                    self.settings.clone(),
-                    self.storage.clone(),
-                    move |_lang| {
-                        self_clone.render_internal_page("brunya://settings");
-                    },
-                ))
+                (
+                    t!("common.settings"),
+                    crate::ui::internal_views::build_settings_view(
+                        self.settings.clone(),
+                        self.storage.clone(),
+                        move |_lang| {
+                            self_clone.render_internal_page("brunya://settings");
+                        },
+                    ),
+                )
             }
             "brunya://history" => {
                 let self_clone = self.clone();
-                (t!("common.history"), crate::ui::internal_views::build_history_view(
-                    self.storage.clone(),
-                    move |target| {
-                        self_clone.load_url(target);
-                    },
-                ))
+                (
+                    t!("common.history"),
+                    crate::ui::internal_views::build_history_view(
+                        self.storage.clone(),
+                        move |target| {
+                            self_clone.load_url(target);
+                        },
+                    ),
+                )
             }
-            "brunya://downloads" => {
-                (t!("common.downloads"), crate::ui::internal_views::build_downloads_view(
-                    self.storage.clone(),
-                ))
-            }
+            "brunya://downloads" => (
+                t!("common.downloads"),
+                crate::ui::internal_views::build_downloads_view(self.storage.clone()),
+            ),
             "brunya://bookmarks" => {
                 let self_clone = self.clone();
-                (t!("common.bookmarks"), crate::ui::internal_views::build_bookmarks_view(
-                    self.storage.clone(),
-                    move |target| {
-                        self_clone.load_url(target);
-                    },
-                ))
+                (
+                    t!("common.bookmarks"),
+                    crate::ui::internal_views::build_bookmarks_view(
+                        self.storage.clone(),
+                        move |target| {
+                            self_clone.load_url(target);
+                        },
+                    ),
+                )
             }
             "brunya://extensions" => {
                 let title = t!("extensions.extensions_title");
@@ -634,9 +680,18 @@ impl WebView {
                 };
                 (title, widget)
             }
-            "brunya://private" => (t!("common.private_window_title"), crate::ui::private_view::build_private_info_view()),
-            "brunya://about" => (t!("common.about"), crate::ui::internal_views::build_about_view()),
-            _ => (t!("app_name"), crate::ui::internal_views::build_about_view()),
+            "brunya://private" => (
+                t!("common.private_window_title"),
+                crate::ui::private_view::build_private_info_view(),
+            ),
+            "brunya://about" => (
+                t!("common.about"),
+                crate::ui::internal_views::build_about_view(),
+            ),
+            _ => (
+                t!("app_name"),
+                crate::ui::internal_views::build_about_view(),
+            ),
         };
 
         widget.set_vexpand(true);
@@ -679,7 +734,11 @@ impl WebView {
             .build();
 
         let desc = Label::builder()
-            .label(&format!("{}\n{}", &t!("common.connection_failed_title", url => url), error_msg))
+            .label(&format!(
+                "{}\n{}",
+                &t!("common.connection_failed_title", url => url),
+                error_msg
+            ))
             .css_classes(["dim-label"])
             .justify(gtk4::Justification::Center)
             .build();

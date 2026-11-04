@@ -1,0 +1,47 @@
+name: Relato de defeito
+description: Algo no Brunya Browser não se comporta como o código indica.
+title: "[defeito] "
+labels: ["defeito"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Não descreva vulnerabilidade neste formulário. Use o caminho de
+        SECURITY.md. Não cole senha, cookie, token nem dado pessoal.
+  - type: textarea
+    id: comportamento
+    attributes:
+      label: O que aconteceu
+      description: Diga o que você fez e o que o programa fez.
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que você esperava
+    validations:
+      required: true
+  - type: input
+    id: versao
+    attributes:
+      label: Versão ou commit
+      placeholder: "0.3.0 ou hash do commit"
+    validations:
+      required: true
+  - type: input
+    id: sistema
+    attributes:
+      label: Sistema
+      placeholder: "Linux Mint 22, Wayland ou X11"
+    validations:
+      required: true
+  - type: textarea
+    id: passos
+    attributes:
+      label: Passos para repetir
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true

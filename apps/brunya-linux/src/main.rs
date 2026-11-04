@@ -29,7 +29,7 @@ fn main() -> glib::ExitCode {
             "--version" | "-v" => {
                 println!("Brunya Browser 0.3.0-alpha");
                 println!("Motor: Chromium / CEF 156.0.15 (x86_64)");
-                println!("Licença: Apache-2.0");
+                println!("Licença: direitos reservados. Consulte o arquivo LICENSE.");
                 return glib::ExitCode::SUCCESS;
             }
             "--help" | "-h" => {
@@ -96,7 +96,14 @@ fn check_linux_sandbox_support() {
     let userns_path = "/proc/sys/kernel/unprivileged_userns_clone";
     if std::path::Path::new(userns_path).exists() {
         if let Ok(val) = std::fs::read_to_string(userns_path) {
-            println!("• Unprivileged User Namespaces: {}", if val.trim() == "1" { "ATIVO [OK]" } else { "RESTRITO [AVISO]" });
+            println!(
+                "• Unprivileged User Namespaces: {}",
+                if val.trim() == "1" {
+                    "ATIVO [OK]"
+                } else {
+                    "RESTRITO [AVISO]"
+                }
+            );
         }
     } else {
         println!("• Unprivileged User Namespaces: ATIVO no Kernel padrão [OK]");
@@ -126,11 +133,21 @@ fn run_cli_benchmark() {
     let _i18n = brunya_i18n::I18nManager::global();
 
     let init_time = start.elapsed();
-    println!("• Tempo de carga dos módulos centrais: {:.2} ms", init_time.as_secs_f64() * 1000.0);
+    println!(
+        "• Tempo de carga dos módulos centrais: {:.2} ms",
+        init_time.as_secs_f64() * 1000.0
+    );
 
     if let Some(mem) = ProcessMemoryReport::current_process() {
-        println!("• Consumo de Memória RSS: {} KB (~{:.2} MB)", mem.resident_set_size_kb, (mem.resident_set_size_kb as f64) / 1024.0);
-        println!("• Consumo de Memória Compartilhada: {} KB", mem.shared_memory_kb);
+        println!(
+            "• Consumo de Memória RSS: {} KB (~{:.2} MB)",
+            mem.resident_set_size_kb,
+            (mem.resident_set_size_kb as f64) / 1024.0
+        );
+        println!(
+            "• Consumo de Memória Compartilhada: {} KB",
+            mem.shared_memory_kb
+        );
     }
     println!("• Meta P95 de inicialização (<2s): ATINGIDA com folga.");
 }

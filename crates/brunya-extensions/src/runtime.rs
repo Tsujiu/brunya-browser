@@ -6,9 +6,7 @@
 use crate::errors::{ExtensionError, Result};
 use crate::security::SecurityManager;
 use crate::types::{
-    ExtensionEvent, ExtensionId, ExtensionInfo,
-    ExtensionMessage,
-    RuntimeSessionId,
+    ExtensionEvent, ExtensionId, ExtensionInfo, ExtensionMessage, RuntimeSessionId,
 };
 use parking_lot::RwLock;
 use std::collections::HashMap;
@@ -45,7 +43,7 @@ pub struct ExtensionContext {
 
 /// Runtime de extensões — gerencia ciclo de vida e execução.
 pub struct ExtensionRuntime {
-    security: Arc<SecurityManager>,
+    _security: Arc<SecurityManager>,
     contexts: RwLock<HashMap<String, Arc<ExtensionContext>>>,
     event_queue: RwLock<Vec<(ExtensionId, serde_json::Value)>>,
 }
@@ -53,7 +51,7 @@ pub struct ExtensionRuntime {
 impl ExtensionRuntime {
     pub fn new(security: Arc<SecurityManager>) -> Self {
         Self {
-            security,
+            _security: security,
             contexts: RwLock::new(HashMap::new()),
             event_queue: RwLock::new(Vec::new()),
         }
@@ -88,8 +86,9 @@ impl ExtensionRuntime {
     /// Inicia (ou "acorda") o Service Worker de uma extensão.
     pub fn start_service_worker(&self, ext_id: &ExtensionId) -> Result<()> {
         let contexts = self.contexts.read();
-        let ctx = contexts.get(&ext_id.0)
-            .ok_or_else(|| ExtensionError::NotFound(format!("Contexto não encontrado: {}", ext_id)))?;
+        let ctx = contexts.get(&ext_id.0).ok_or_else(|| {
+            ExtensionError::NotFound(format!("Contexto não encontrado: {}", ext_id))
+        })?;
 
         let mut state = ctx.sw_state.write();
         match *state {
@@ -141,10 +140,7 @@ impl ExtensionRuntime {
             let mut state = ctx.sw_state.write();
             if *state == ServiceWorkerState::Running {
                 *state = ServiceWorkerState::Suspended;
-                info!(
-                    "Service Worker suspenso por inatividade: {}",
-                    ctx.info.name
-                );
+                info!("Service Worker suspenso por inatividade: {}", ctx.info.name);
             }
         }
         Ok(())
@@ -210,9 +206,7 @@ impl ExtensionRuntime {
     pub fn send_message(&self, target: &ExtensionId, message: ExtensionMessage) -> Result<()> {
         let contexts = self.contexts.read();
         if contexts.contains_key(&target.0) {
-            self.dispatch_event(target, ExtensionEvent::RuntimeOnMessage {
-                message,
-            });
+            self.dispatch_event(target, ExtensionEvent::RuntimeOnMessage { message });
             Ok(())
         } else {
             Err(ExtensionError::NotFound(format!(
@@ -245,7 +239,10 @@ impl ExtensionRuntime {
                     drop(state);
                     *ctx.sw_state.write() = ServiceWorkerState::Suspended;
                     suspended.push(ExtensionId(id.clone()));
-                    info!("SW suspenso automaticamente: {} (ocioso por {:?})", id, idle);
+                    info!(
+                        "SW suspenso automaticamente: {} (ocioso por {:?})",
+                        id, idle
+                    );
                 }
             }
         }
@@ -266,8 +263,7 @@ impl ExtensionRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{BackgroundType, ExtensionState, InstallType};
-    use std::path::PathBuf;
+    use crate::types::BackgroundType;
 
     fn create_test_ext() -> ExtensionInfo {
         ExtensionInfo {

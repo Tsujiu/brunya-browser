@@ -3,8 +3,7 @@ use brunya_i18n::t;
 use brunya_tabs::TabDescriptor;
 use gtk4::prelude::*;
 use gtk4::{
-    Align, Box as GtkBox, Button, GestureClick, Image, Label, Orientation,
-    Popover, ScrolledWindow,
+    Align, Box as GtkBox, Button, GestureClick, Image, Label, Orientation, Popover, ScrolledWindow,
 };
 use std::collections::HashMap;
 
@@ -122,9 +121,15 @@ impl BrowserTabBar {
 
             // Tooltip informativo com consumo de RAM específico de CADA aba (aparece SOMENTE ao passar o mouse sobre o ícone)
             let is_internal = tab.url.starts_with("brunya://");
-            let ram_mb = ram_usages.get(&tab.id).copied().unwrap_or(tab.memory_usage_mb);
+            let ram_mb = ram_usages
+                .get(&tab.id)
+                .copied()
+                .unwrap_or(tab.memory_usage_mb);
             let ram_tooltip = if is_internal {
-                format!("{} — Consumo de RAM: {} MB (Otimizado)", display_title, ram_mb)
+                format!(
+                    "{} — Consumo de RAM: {} MB (Otimizado)",
+                    display_title, ram_mb
+                )
             } else {
                 let domain = tab.url.split('/').nth(2).unwrap_or(display_title);
                 format!("{} — Consumo de RAM: {} MB", domain, ram_mb)
@@ -134,7 +139,13 @@ impl BrowserTabBar {
             icon.set_tooltip_text(Some(&ram_tooltip));
 
             let show_label = target_width >= 70;
-            let max_chars = if target_width >= 180 { 18 } else if target_width >= 120 { 11 } else { 6 };
+            let max_chars = if target_width >= 180 {
+                18
+            } else if target_width >= 120 {
+                11
+            } else {
+                6
+            };
 
             let label = Label::builder()
                 .label(display_title)
@@ -194,7 +205,10 @@ impl BrowserTabBar {
                 menu_box.set_margin_start(4);
                 menu_box.set_margin_end(4);
 
-                let dup_btn = Button::builder().label("Duplicar Aba").css_classes(["flat"]).build();
+                let dup_btn = Button::builder()
+                    .label("Duplicar Aba")
+                    .css_classes(["flat"])
+                    .build();
                 let d_cb = dup_cb.clone();
                 let pop_c1 = popover.clone();
                 dup_btn.connect_clicked(move |_| {
@@ -202,7 +216,10 @@ impl BrowserTabBar {
                     d_cb(tid);
                 });
 
-                let pin_btn = Button::builder().label("Fixar / Desafixar Aba").css_classes(["flat"]).build();
+                let pin_btn = Button::builder()
+                    .label("Fixar / Desafixar Aba")
+                    .css_classes(["flat"])
+                    .build();
                 let p_cb = pin_cb.clone();
                 let pop_c2 = popover.clone();
                 pin_btn.connect_clicked(move |_| {
@@ -210,7 +227,10 @@ impl BrowserTabBar {
                     p_cb(tid);
                 });
 
-                let close_action_btn = Button::builder().label("Fechar Aba").css_classes(["flat", "destructive-action"]).build();
+                let close_action_btn = Button::builder()
+                    .label("Fechar Aba")
+                    .css_classes(["flat", "destructive-action"])
+                    .build();
                 let c_cb = close_context_cb.clone();
                 let pop_c3 = popover.clone();
                 close_action_btn.connect_clicked(move |_| {

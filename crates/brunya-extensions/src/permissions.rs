@@ -91,7 +91,11 @@ impl Permission {
             "system.cpu" => Permission::SystemCpu,
             "system.memory" => Permission::SystemMemory,
             "system.display" => Permission::SystemDisplay,
-            _ if s.starts_with("https://") || s.starts_with("http://") || s.starts_with("*://") || s.contains("://") => {
+            _ if s.starts_with("https://")
+                || s.starts_with("http://")
+                || s.starts_with("*://")
+                || s.contains("://") =>
+            {
                 Permission::HostPermission(s.to_string())
             }
             _ => Permission::Other(s.to_string()),
@@ -205,7 +209,10 @@ impl PermissionSet {
         self.permissions.contains(&perm.to_string())
             || self.host_permissions.contains(&perm.to_string())
             || match p {
-                Permission::AllUrls => !self.host_permissions.is_empty() || self.permissions.contains(&"<all_urls>".to_string()),
+                Permission::AllUrls => {
+                    !self.host_permissions.is_empty()
+                        || self.permissions.contains(&"<all_urls>".to_string())
+                }
                 _ => false,
             }
     }
@@ -259,7 +266,11 @@ impl PermissionsManager {
         self.storage.set_preference(&key, &json)?;
 
         self.granted.write().insert(ext_id.0.clone(), perms.clone());
-        info!("Permissões concedidas para extensão {}: {:?}", ext_id, perms.all_permissions());
+        info!(
+            "Permissões concedidas para extensão {}: {:?}",
+            ext_id,
+            perms.all_permissions()
+        );
         Ok(())
     }
 
@@ -302,11 +313,19 @@ impl PermissionsManager {
     }
 
     /// Revoga permissões específicas de uma extensão.
-    pub fn revoke_permissions(&self, ext_id: &ExtensionId, perms_to_remove: &[String]) -> Result<()> {
+    pub fn revoke_permissions(
+        &self,
+        ext_id: &ExtensionId,
+        perms_to_remove: &[String],
+    ) -> Result<()> {
         let mut perms = self.load_permissions(ext_id);
         perms.permissions.retain(|p| !perms_to_remove.contains(p));
-        perms.host_permissions.retain(|p| !perms_to_remove.contains(p));
-        perms.optional_permissions.retain(|p| !perms_to_remove.contains(p));
+        perms
+            .host_permissions
+            .retain(|p| !perms_to_remove.contains(p));
+        perms
+            .optional_permissions
+            .retain(|p| !perms_to_remove.contains(p));
 
         self.grant_permissions(ext_id, &perms)
     }
@@ -366,7 +385,11 @@ mod tests {
 
     #[test]
     fn test_permission_warnings() {
-        let perms = vec!["storage".to_string(), "cookies".to_string(), "tabs".to_string()];
+        let perms = vec![
+            "storage".to_string(),
+            "cookies".to_string(),
+            "tabs".to_string(),
+        ];
         let warnings = PermissionsManager::permission_warnings(&perms);
         assert!(!warnings.is_empty());
         assert!(warnings.iter().any(|w| w.contains("cookies")));

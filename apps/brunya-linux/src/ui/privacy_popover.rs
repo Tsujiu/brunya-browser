@@ -2,8 +2,8 @@ use brunya_adblock::{AdblockEngine, ShieldProfile};
 use brunya_core::types::TabId;
 use gtk4::prelude::*;
 use gtk4::{
-    Align, Box as GtkBox, Button, Image, Label, ListBox, Orientation, Popover,
-    ScrolledWindow, SelectionMode, Switch,
+    Align, Box as GtkBox, Button, Image, Label, ListBox, Orientation, Popover, ScrolledWindow,
+    SelectionMode, Switch,
 };
 use libadwaita::prelude::*;
 use libadwaita::ActionRow;
@@ -28,7 +28,9 @@ impl PrivacyShieldPopover {
         let header_box = GtkBox::new(Orientation::Horizontal, 10);
         header_box.set_valign(Align::Center);
 
-        let shield_bytes = glib::Bytes::from_static(include_bytes!("../../../../assets/icons/brunya-shield-white.svg"));
+        let shield_bytes = glib::Bytes::from_static(include_bytes!(
+            "../../../../assets/icons/brunya-shield-white.svg"
+        ));
         let shield_tex = gdk4::Texture::from_bytes(&shield_bytes).ok();
         let shield_img = if let Some(ref tex) = shield_tex {
             let img = Image::from_paintable(Some(tex));
@@ -125,15 +127,36 @@ impl PrivacyShieldPopover {
 
         let p_ess = Button::builder()
             .label("Essencial")
-            .css_classes(["pill", if current_profile == ShieldProfile::Essential { "suggested-action" } else { "flat" }])
+            .css_classes([
+                "pill",
+                if current_profile == ShieldProfile::Essential {
+                    "suggested-action"
+                } else {
+                    "flat"
+                },
+            ])
             .build();
         let p_bal = Button::builder()
             .label("Equilibrado")
-            .css_classes(["pill", if current_profile == ShieldProfile::Balanced { "suggested-action" } else { "flat" }])
+            .css_classes([
+                "pill",
+                if current_profile == ShieldProfile::Balanced {
+                    "suggested-action"
+                } else {
+                    "flat"
+                },
+            ])
             .build();
         let p_str = Button::builder()
             .label("Rigoroso")
-            .css_classes(["pill", if current_profile == ShieldProfile::Strict { "suggested-action" } else { "flat" }])
+            .css_classes([
+                "pill",
+                if current_profile == ShieldProfile::Strict {
+                    "suggested-action"
+                } else {
+                    "flat"
+                },
+            ])
             .build();
 
         let ab_p1 = adblock_engine.clone();
@@ -193,8 +216,14 @@ impl PrivacyShieldPopover {
         let c_ads = GtkBox::new(Orientation::Vertical, 2);
         c_ads.add_css_class("card");
         c_ads.set_hexpand(true);
-        let c_ads_val = Label::builder().label(&stats.ads_blocked.to_string()).css_classes(["title-3", "bold", "accent"]).build();
-        let c_ads_lbl = Label::builder().label("Anúncios").css_classes(["caption", "dim-label"]).build();
+        let c_ads_val = Label::builder()
+            .label(&stats.ads_blocked.to_string())
+            .css_classes(["title-3", "bold", "accent"])
+            .build();
+        let c_ads_lbl = Label::builder()
+            .label("Anúncios")
+            .css_classes(["caption", "dim-label"])
+            .build();
         c_ads.append(&c_ads_val);
         c_ads.append(&c_ads_lbl);
 
@@ -202,8 +231,14 @@ impl PrivacyShieldPopover {
         let c_tr = GtkBox::new(Orientation::Vertical, 2);
         c_tr.add_css_class("card");
         c_tr.set_hexpand(true);
-        let c_tr_val = Label::builder().label(&stats.trackers_blocked.to_string()).css_classes(["title-3", "bold", "success"]).build();
-        let c_tr_lbl = Label::builder().label("Rastreadores").css_classes(["caption", "dim-label"]).build();
+        let c_tr_val = Label::builder()
+            .label(&stats.trackers_blocked.to_string())
+            .css_classes(["title-3", "bold", "success"])
+            .build();
+        let c_tr_lbl = Label::builder()
+            .label("Rastreadores")
+            .css_classes(["caption", "dim-label"])
+            .build();
         c_tr.append(&c_tr_val);
         c_tr.append(&c_tr_lbl);
 
@@ -211,8 +246,14 @@ impl PrivacyShieldPopover {
         let c_th = GtkBox::new(Orientation::Vertical, 2);
         c_th.add_css_class("card");
         c_th.set_hexpand(true);
-        let c_th_val = Label::builder().label(&stats.threats_detected.to_string()).css_classes(["title-3", "bold", "warning"]).build();
-        let c_th_lbl = Label::builder().label("Ameaças").css_classes(["caption", "dim-label"]).build();
+        let c_th_val = Label::builder()
+            .label(&stats.threats_detected.to_string())
+            .css_classes(["title-3", "bold", "warning"])
+            .build();
+        let c_th_lbl = Label::builder()
+            .label("Ameaças")
+            .css_classes(["caption", "dim-label"])
+            .build();
         c_th.append(&c_th_val);
         c_th.append(&c_th_lbl);
 
@@ -220,8 +261,14 @@ impl PrivacyShieldPopover {
         let c_url = GtkBox::new(Orientation::Vertical, 2);
         c_url.add_css_class("card");
         c_url.set_hexpand(true);
-        let c_url_val = Label::builder().label(&stats.urls_cleaned.to_string()).css_classes(["title-3", "bold"]).build();
-        let c_url_lbl = Label::builder().label("URLs Limpas").css_classes(["caption", "dim-label"]).build();
+        let c_url_val = Label::builder()
+            .label(&stats.urls_cleaned.to_string())
+            .css_classes(["title-3", "bold"])
+            .build();
+        let c_url_lbl = Label::builder()
+            .label("URLs Limpas")
+            .css_classes(["caption", "dim-label"])
+            .build();
         c_url.append(&c_url_val);
         c_url.append(&c_url_lbl);
 
@@ -248,23 +295,60 @@ impl PrivacyShieldPopover {
         let cfg = adblock_engine.modules_config();
 
         let modules_defs = [
-            ("AdBlock Nativo", "Bloqueio de publicidade e banners", cfg.adblock),
-            ("Anti-Tracking", "Bloqueio de pixels, beacons e analytics", cfg.anti_tracking),
-            ("Sites Maliciosos", "Proteção contra phishing e malware", cfg.malicious_sites),
-            ("Anti-Popup", "Bloqueio de janelas e redirecionamentos", cfg.anti_popup),
-            ("Anti-Annoyances", "Remoção de avisos de cookies e overlays", cfg.anti_annoyances),
-            ("Anti-Fingerprinting", "Proteção de APIs de canvas e áudio", cfg.anti_fingerprinting),
-            ("Anti-Crypto Mining", "Bloqueio de scripts de cryptojacking", cfg.anti_crypto_mining),
-            ("URL Cleaner", "Remoção de parâmetros de rastreamento", cfg.url_cleaner),
-            ("Cookies de Terceiros", "Bloqueio de cookies não particionados", cfg.third_party_cookies),
-            ("Anúncios em Vídeo", "Bloqueio de publicidade em streams", cfg.video_ads),
+            (
+                "AdBlock Nativo",
+                "Bloqueio de publicidade e banners",
+                cfg.adblock,
+            ),
+            (
+                "Anti-Tracking",
+                "Bloqueio de pixels, beacons e analytics",
+                cfg.anti_tracking,
+            ),
+            (
+                "Sites Maliciosos",
+                "Proteção contra phishing e malware",
+                cfg.malicious_sites,
+            ),
+            (
+                "Anti-Popup",
+                "Bloqueio de janelas e redirecionamentos",
+                cfg.anti_popup,
+            ),
+            (
+                "Anti-Annoyances",
+                "Remoção de avisos de cookies e overlays",
+                cfg.anti_annoyances,
+            ),
+            (
+                "Anti-Fingerprinting",
+                "Proteção de APIs de canvas e áudio",
+                cfg.anti_fingerprinting,
+            ),
+            (
+                "Anti-Crypto Mining",
+                "Bloqueio de scripts de cryptojacking",
+                cfg.anti_crypto_mining,
+            ),
+            (
+                "URL Cleaner",
+                "Remoção de parâmetros de rastreamento",
+                cfg.url_cleaner,
+            ),
+            (
+                "Cookies de Terceiros",
+                "Bloqueio de cookies não particionados",
+                cfg.third_party_cookies,
+            ),
+            (
+                "Anúncios em Vídeo",
+                "Bloqueio de publicidade em streams",
+                cfg.video_ads,
+            ),
         ];
 
         for (m_title, m_desc, is_active) in modules_defs {
-            let row = ActionRow::builder()
-                .title(m_title)
-                .subtitle(m_desc)
-                .build();
+            let row = ActionRow::builder().title(m_title).subtitle(m_desc).build();
             let sw = Switch::builder()
                 .active(is_active)
                 .valign(Align::Center)

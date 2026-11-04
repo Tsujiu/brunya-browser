@@ -107,7 +107,10 @@ impl UrlHelper {
         }
 
         // Esquema explícito
-        if trimmed.starts_with("http://") || trimmed.starts_with("https://") || trimmed.starts_with("file://") {
+        if trimmed.starts_with("http://")
+            || trimmed.starts_with("https://")
+            || trimmed.starts_with("file://")
+        {
             if let Ok(url) = Url::parse(trimmed) {
                 return url.to_string();
             }
@@ -122,7 +125,8 @@ impl UrlHelper {
         }
 
         // Caso contrário, é uma pesquisa no mecanismo padrão
-        let encoded_query = url::form_urlencoded::byte_serialize(trimmed.as_bytes()).collect::<String>();
+        let encoded_query =
+            url::form_urlencoded::byte_serialize(trimmed.as_bytes()).collect::<String>();
         if search_engine_template.contains("%s") {
             search_engine_template.replace("%s", &encoded_query)
         } else {

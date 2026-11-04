@@ -1,0 +1,23 @@
+name: CLA
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  aceite:
+    name: Aceite explicito do CLA
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Conferir a frase de aceite no corpo do Pull Request
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          phrase='Aceite do CLA: eu li CLA.md (CLA-BRUNYA-2026-11-02) e concedo ao titular a licença não exclusiva descrita nesse documento.'
+          if printf '%s\n' "$BODY" | grep -F -x -q "$phrase"; then
+            echo "Aceite registrado no texto deste Pull Request."
+          else
+            echo "O corpo do Pull Request não contém a frase exata de CLA.md."
+            echo "Isto não é um aceite. Copie a frase para uma linha própria."
+            exit 1
+          fi

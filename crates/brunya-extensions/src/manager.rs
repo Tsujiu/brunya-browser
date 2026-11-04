@@ -12,10 +12,7 @@ use crate::registry::ExtensionRegistry;
 use crate::runtime::ExtensionRuntime;
 use crate::security::SecurityManager;
 use crate::storage::ExtensionStorageManager;
-use crate::types::{
-    ExtensionEvent, ExtensionId, ExtensionInfo,
-    ExtensionState, InstallType,
-};
+use crate::types::{ExtensionEvent, ExtensionId, ExtensionInfo, ExtensionState, InstallType};
 use std::path::Path;
 use std::sync::Arc;
 use tracing::{info, warn};
@@ -78,7 +75,10 @@ impl ExtensionManager {
         explicit_id: Option<&str>,
         install_type: InstallType,
     ) -> Result<ExtensionInfo> {
-        let loaded = self.loader.read().load_from_bytes(bytes, explicit_id, install_type)?;
+        let loaded = self
+            .loader
+            .read()
+            .load_from_bytes(bytes, explicit_id, install_type)?;
         self.install_loaded(loaded)
     }
 
@@ -99,7 +99,8 @@ impl ExtensionManager {
             host_permissions: loaded.manifest.host_permissions.clone(),
             optional_host_permissions: vec![],
         };
-        self.permissions.grant_permissions(&loaded.info.id, &perm_set)?;
+        self.permissions
+            .grant_permissions(&loaded.info.id, &perm_set)?;
 
         // Inicializar runtime
         self.runtime.initialize_context(&loaded.info);
@@ -139,7 +140,8 @@ impl ExtensionManager {
             if info.background_type.is_some() {
                 self.runtime.start_service_worker(id).ok();
             }
-            self.runtime.dispatch_event(id, ExtensionEvent::RuntimeOnStartup);
+            self.runtime
+                .dispatch_event(id, ExtensionEvent::RuntimeOnStartup);
         }
 
         info!("Extensão ativada: {}", id);
@@ -248,7 +250,11 @@ impl ExtensionManager {
         for ext in active {
             // Verificar se diretório ainda existe
             if !ext.directory.exists() && ext.install_type != InstallType::Unpacked {
-                warn!("Diretório da extensão não encontrado: {} ({})", ext.name, ext.directory.display());
+                warn!(
+                    "Diretório da extensão não encontrado: {} ({})",
+                    ext.name,
+                    ext.directory.display()
+                );
                 self.registry.set_state(&ext.id, ExtensionState::Error).ok();
                 continue;
             }
@@ -257,7 +263,10 @@ impl ExtensionManager {
             if let Ok((manifest, _)) = Manifest::load_from_dir(&ext.directory) {
                 let validation = manifest.validate();
                 if !validation.is_valid {
-                    warn!("Manifest inválido na inicialização: {} ({})", ext.name, ext.id);
+                    warn!(
+                        "Manifest inválido na inicialização: {} ({})",
+                        ext.name, ext.id
+                    );
                     self.registry.set_state(&ext.id, ExtensionState::Error).ok();
                     continue;
                 }
@@ -269,11 +278,15 @@ impl ExtensionManager {
                 self.runtime.initialize_context(&ext);
 
                 // Disparar evento onStartup
-                self.runtime.dispatch_event(&ext.id, ExtensionEvent::RuntimeOnStartup);
+                self.runtime
+                    .dispatch_event(&ext.id, ExtensionEvent::RuntimeOnStartup);
 
                 loaded.push(ext.id);
             } else {
-                warn!("Falha ao carregar manifest na inicialização: {} ({})", ext.name, ext.id);
+                warn!(
+                    "Falha ao carregar manifest na inicialização: {} ({})",
+                    ext.name, ext.id
+                );
                 self.registry.set_state(&ext.id, ExtensionState::Error).ok();
             }
         }
@@ -289,7 +302,10 @@ impl ExtensionManager {
         let timeout = std::time::Duration::from_secs(30);
         let suspended = self.runtime.suspend_idle_workers(timeout);
         if !suspended.is_empty() {
-            info!("{} Service Workers suspensos por inatividade", suspended.len());
+            info!(
+                "{} Service Workers suspensos por inatividade",
+                suspended.len()
+            );
         }
     }
 
@@ -324,14 +340,19 @@ impl ExtensionManager {
         if let Some(info) = self.registry.get(id) {
             // Verificar manifest version
             if info.manifest_version == 2 {
-                warnings.push("Manifest V2 tem suporte limitado. Considere migrar para V3.".to_string());
+                warnings.push(
+                    "Manifest V2 tem suporte limitado. Considere migrar para V3.".to_string(),
+                );
             }
 
             // Verificar permissões não implementadas
             for perm in &info.permissions {
                 match perm.as_str() {
                     "declarativeNetRequest" | "nativeMessaging" | "privacy" | "tabCapture" => {
-                        warnings.push(format!("Permissão '{}' não está disponível no polyfill atual.", perm));
+                        warnings.push(format!(
+                            "Permissão '{}' não está disponível no polyfill atual.",
+                            perm
+                        ));
                     }
                     _ => {}
                 }
@@ -344,15 +365,12 @@ impl ExtensionManager {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::ExtensionSystem;
     use std::sync::Arc;
 
     fn create_test_system() -> ExtensionSystem {
         let dir = tempfile::TempDir::new().unwrap();
-        let storage_mgr = Arc::new(
-            brunya_storage::StorageManager::open_in_memory().unwrap()
-        );
+        let storage_mgr = Arc::new(brunya_storage::StorageManager::open_in_memory().unwrap());
         ExtensionSystem::new(dir.path().to_path_buf(), storage_mgr)
     }
 

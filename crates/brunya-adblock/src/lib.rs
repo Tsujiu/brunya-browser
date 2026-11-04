@@ -128,11 +128,15 @@ impl AdblockEngine {
     }
 
     pub fn remove_site_exception(&self, domain: &str) {
-        self.whitelist_domains.write().remove(&domain.to_lowercase());
+        self.whitelist_domains
+            .write()
+            .remove(&domain.to_lowercase());
     }
 
     pub fn is_site_allowed(&self, domain: &str) -> bool {
-        self.whitelist_domains.read().contains(&domain.to_lowercase())
+        self.whitelist_domains
+            .read()
+            .contains(&domain.to_lowercase())
     }
 
     pub fn add_rule(&self, rule_str: &str) {
@@ -145,11 +149,18 @@ impl AdblockEngine {
     fn load_default_protection_list(&self) {
         let mut rules = self.rules.write();
 
-        if let Ok(rules_val) = serde_json::from_str::<serde_json::Value>(include_str!("../resources/adblock_rules.json")) {
+        if let Ok(rules_val) = serde_json::from_str::<serde_json::Value>(include_str!(
+            "../resources/adblock_rules.json"
+        )) {
             if let Some(arr) = rules_val.as_array() {
                 for item in arr {
                     // Importar apenas regras de ação 'block' (regras cosméticas css-display-none não bloqueiam URLs)
-                    if item.get("action").and_then(|a| a.get("type")).and_then(|t| t.as_str()) != Some("block") {
+                    if item
+                        .get("action")
+                        .and_then(|a| a.get("type"))
+                        .and_then(|t| t.as_str())
+                        != Some("block")
+                    {
                         continue;
                     }
                     if let Some(trigger) = item.get("trigger") {
@@ -171,7 +182,10 @@ impl AdblockEngine {
             }
         }
 
-        info!("BruNya Shield carregou {} regras fundamentais de proteção", rules.len());
+        info!(
+            "BruNya Shield carregou {} regras fundamentais de proteção",
+            rules.len()
+        );
     }
 
     pub fn should_block(
@@ -221,7 +235,11 @@ impl AdblockEngine {
                 || url_lower.contains("cryptonight")
                 || url_lower.contains("miner.monero")
             {
-                self.record_block(tab_id, raw_url, "Anti-CryptoMining: Bloqueado script de mineração");
+                self.record_block(
+                    tab_id,
+                    raw_url,
+                    "Anti-CryptoMining: Bloqueado script de mineração",
+                );
                 return true;
             }
         }
@@ -243,7 +261,11 @@ impl AdblockEngine {
                 || url_lower.contains("imasdk.googleapis.com")
                 || url_lower.contains("video-ad-tracker")
             {
-                self.record_block(tab_id, raw_url, "VideoAds: Bloqueado anúncio/rastreador do YouTube");
+                self.record_block(
+                    tab_id,
+                    raw_url,
+                    "VideoAds: Bloqueado anúncio/rastreador do YouTube",
+                );
                 return true;
             }
         }
@@ -252,7 +274,9 @@ impl AdblockEngine {
 
         // 5. Verificar regras de exceção primeiro (@@)
         for rule in rules.iter() {
-            if rule.kind == RuleKind::Whitelist && rule.matches(&url_lower, &host, source_domain, resource_type) {
+            if rule.kind == RuleKind::Whitelist
+                && rule.matches(&url_lower, &host, source_domain, resource_type)
+            {
                 return false;
             }
         }
@@ -260,9 +284,16 @@ impl AdblockEngine {
         // 6. Modo Rigoroso: bloqueia frames de terceiros e rastreadores adicionais
         if mode == ProtectionMode::Strict {
             if let Some(src) = source_domain {
-                if !host.is_empty() && !ParsedRule::base_domain(src).eq_ignore_ascii_case(ParsedRule::base_domain(&host)) {
+                if !host.is_empty()
+                    && !ParsedRule::base_domain(src)
+                        .eq_ignore_ascii_case(ParsedRule::base_domain(&host))
+                {
                     if let Some(ResourceType::Subdocument) = resource_type {
-                        self.record_block(tab_id, raw_url, "Strict Mode: Subdocument de Terceiro Bloqueado");
+                        self.record_block(
+                            tab_id,
+                            raw_url,
+                            "Strict Mode: Subdocument de Terceiro Bloqueado",
+                        );
                         return true;
                     }
                 }
@@ -272,7 +303,9 @@ impl AdblockEngine {
         // 7. Módulo 01 & Módulo 02 — Regras de Rede de Anúncios e Rastreadores
         if modules.adblock || modules.anti_tracking {
             for rule in rules.iter() {
-                if rule.kind == RuleKind::Network && rule.matches(&url_lower, &host, source_domain, resource_type) {
+                if rule.kind == RuleKind::Network
+                    && rule.matches(&url_lower, &host, source_domain, resource_type)
+                {
                     self.record_block(tab_id, raw_url, &rule.raw);
                     return true;
                 }
@@ -285,14 +318,20 @@ impl AdblockEngine {
     fn record_block(&self, tab_id: TabId, url: &str, rule: &str) {
         self.total_blocked_counter.fetch_add(1, Ordering::Relaxed);
         self.stats.record_block(tab_id, url, rule);
-        debug!("BruNya Shield bloqueou requisição: {} (regra: {})", url, rule);
+        debug!(
+            "BruNya Shield bloqueou requisição: {} (regra: {})",
+            url, rule
+        );
     }
 
     fn record_threat_block(&self, tab_id: TabId, url: &str, reason: &str) {
         self.total_blocked_counter.fetch_add(1, Ordering::Relaxed);
         self.stats.record_threat_detected();
         self.stats.record_block(tab_id, url, reason);
-        warn!("BruNya Shield Threat Intelligence bloqueou ameaça: {} ({})", url, reason);
+        warn!(
+            "BruNya Shield Threat Intelligence bloqueou ameaça: {} ({})",
+            url, reason
+        );
     }
 }
 

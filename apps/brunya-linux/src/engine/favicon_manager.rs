@@ -66,10 +66,16 @@ impl FaviconManager {
 
         std::thread::spawn(move || {
             let _ = fs::create_dir_all(&cache_dir);
-            let url = format!("https://www.google.com/s2/favicons?domain={}&sz=32", domain_clone);
+            let url = format!(
+                "https://www.google.com/s2/favicons?domain={}&sz=32",
+                domain_clone
+            );
 
             let res = ureq::get(&url)
-                .header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36")
+                .header(
+                    "User-Agent",
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+                )
                 .call();
 
             if let Ok(mut resp) = res {

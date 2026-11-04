@@ -1,3 +1,5 @@
+use crate::engine::extension_host::{extension_image, toolbar_icon};
+use crate::engine::FaviconManager;
 use brunya_extensions::loader::inspect_package;
 use brunya_extensions::store::{download_store_package, parse_store_input};
 use brunya_extensions::types::{ExtensionState, InstallType};
@@ -5,20 +7,17 @@ use brunya_extensions::ExtensionSystem;
 use brunya_i18n::{t, I18nManager, Language};
 use brunya_settings::{SettingsManager, ShortcutDisplayMode, ThemePreference};
 use brunya_storage::StorageManager;
-use crate::engine::extension_host::{extension_image, toolbar_icon};
-use crate::engine::FaviconManager;
+use gtk4::gio;
 use gtk4::prelude::*;
 use gtk4::{
-    Align, Box as GtkBox, Button, Entry, GestureClick,
-    Image, Label, ListBox, Orientation, Popover, ScrolledWindow, SelectionMode, Switch,
+    Align, Box as GtkBox, Button, Entry, GestureClick, Image, Label, ListBox, Orientation, Popover,
+    ScrolledWindow, SelectionMode, Switch,
 };
-use gtk4::gio;
 use libadwaita::prelude::*;
 use libadwaita::ActionRow;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
-
 
 /// Constrói a página interna "brunya://newtab" inspirada no buscador Pesquisa.
 pub fn build_newtab_view<F: Fn(&str) + 'static>(
@@ -95,7 +94,9 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(
     } else {
         "duckduckgo"
     };
-    engine_icon_box.append(&crate::ui::engine_popover::get_engine_icon(initial_engine_id));
+    engine_icon_box.append(&crate::ui::engine_popover::get_engine_icon(
+        initial_engine_id,
+    ));
 
     let engine_arrow = Image::from_icon_name("pan-down-symbolic");
     engine_arrow.set_pixel_size(10);
@@ -104,7 +105,11 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(
     engine_content.append(&engine_arrow);
     engine_btn.set_child(Some(&engine_content));
 
-    let initial_placeholder = format!("{} {}...", t!("common.search_placeholder_prefix"), current_engine.name);
+    let initial_placeholder = format!(
+        "{} {}...",
+        t!("common.search_placeholder_prefix"),
+        current_engine.name
+    );
     let search_entry = Entry::builder()
         .placeholder_text(&initial_placeholder)
         .hexpand(true)
@@ -127,14 +132,19 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(
                 icon_box_c.remove(&ch);
             }
             icon_box_c.append(&crate::ui::engine_popover::get_engine_icon(engine.id));
-            entry_c.set_placeholder_text(Some(&format!("{} {}...", t!("common.search_placeholder_prefix"), engine.name)));
+            entry_c.set_placeholder_text(Some(&format!(
+                "{} {}...",
+                t!("common.search_placeholder_prefix"),
+                engine.name
+            )));
             *tmpl_c.borrow_mut() = engine.query_template.to_string();
             sm_c.update(|s| {
                 s.search_engine = brunya_settings::SearchEngine {
                     name: engine.name.to_string(),
                     query_template: engine.query_template.to_string(),
                 };
-            }).ok();
+            })
+            .ok();
         });
         popover.popover.set_parent(btn);
         popover.popover.popup();
@@ -228,7 +238,9 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(
             }
 
             let show = settings.get().show_shortcuts_on_newtab;
-            if !show { return; }
+            if !show {
+                return;
+            }
             let shortcut_mode = settings.get().shortcut_display_mode;
             let icon_only = matches!(shortcut_mode, ShortcutDisplayMode::IconOnly);
 
@@ -236,7 +248,9 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(
             let shortcuts = bookmarks.iter().take(12);
 
             // Filter to only show shortcuts from the "shortcuts" folder, or all if none
-            let scoped: Vec<_> = shortcuts.filter(|b| b.folder == "shortcuts" || b.folder.is_empty()).collect();
+            let scoped: Vec<_> = shortcuts
+                .filter(|b| b.folder == "shortcuts" || b.folder.is_empty())
+                .collect();
 
             for bm in &scoped {
                 let card = GtkBox::new(Orientation::Vertical, 6);
@@ -321,10 +335,18 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(
             add_icon_frame.set_valign(Align::Center);
             add_icon_frame.add_css_class("shortcut-icon-frame");
             add_icon_frame.set_margin_top(if icon_only { 10 } else { 12 });
-            if icon_only { add_icon_frame.set_margin_bottom(10); }
+            if icon_only {
+                add_icon_frame.set_margin_bottom(10);
+            }
 
-            let add_icon = Label::builder().label("+").css_classes(["shortcut-add-icon"]).build();
-            let add_label = Label::builder().label("Adicionar").css_classes(["shortcut-label"]).build();
+            let add_icon = Label::builder()
+                .label("+")
+                .css_classes(["shortcut-add-icon"])
+                .build();
+            let add_label = Label::builder()
+                .label("Adicionar")
+                .css_classes(["shortcut-label"])
+                .build();
             add_icon_frame.append(&add_icon);
 
             add_card.append(&add_icon_frame);
@@ -332,7 +354,10 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(
                 add_card.append(&add_label);
             }
 
-            let popover = Popover::builder().has_arrow(true).position(gtk4::PositionType::Top).build();
+            let popover = Popover::builder()
+                .has_arrow(true)
+                .position(gtk4::PositionType::Top)
+                .build();
             let pop_content = GtkBox::new(Orientation::Vertical, 10);
             pop_content.set_margin_top(14);
             pop_content.set_margin_bottom(14);
@@ -354,7 +379,10 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(
                 .hexpand(true)
                 .css_classes(["settings-custom-entry"])
                 .build();
-            let save_btn = Button::builder().label("Salvar").css_classes(["settings-pill"]).build();
+            let save_btn = Button::builder()
+                .label("Salvar")
+                .css_classes(["settings-pill"])
+                .build();
 
             pop_content.append(&title_e);
             pop_content.append(&url_e);
@@ -372,12 +400,19 @@ pub fn build_newtab_view<F: Fn(&str) + 'static>(
                 let url = url_ec.text().trim().to_string();
                 let icon_url = icon_ec.text().trim().to_string();
                 if !title.is_empty() && !url.is_empty() {
-                    let final_url = if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("brunya://") {
+                    let final_url = if url.starts_with("http://")
+                        || url.starts_with("https://")
+                        || url.starts_with("brunya://")
+                    {
                         url
                     } else {
                         format!("https://{}", url)
                     };
-                    let icon_opt = if icon_url.is_empty() { None } else { Some(icon_url.as_str()) };
+                    let icon_opt = if icon_url.is_empty() {
+                        None
+                    } else {
+                        Some(icon_url.as_str())
+                    };
                     let _ = st_c.add_bookmark_with_icon(&final_url, &title, "shortcuts", icon_opt);
                     if let Some(ref f) = *rb.borrow() {
                         f();
@@ -506,8 +541,13 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let card1 = GtkBox::new(Orientation::Vertical, 0);
     card1.add_css_class("settings-card");
 
-    card1.append(&make_section_title_with_icon("preferences-desktop-theme-symbolic", &t!("settings.appearance")));
-    card1.append(&make_section_subtitle("Idioma, tema visual e estilos do navegador"));
+    card1.append(&make_section_title_with_icon(
+        "preferences-desktop-theme-symbolic",
+        &t!("settings.appearance"),
+    ));
+    card1.append(&make_section_subtitle(
+        "Idioma, tema visual e estilos do navegador",
+    ));
 
     // ── Linha: Idioma ──
     let lang_row_box = GtkBox::new(Orientation::Horizontal, 0);
@@ -588,7 +628,10 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let sys_icon = Image::from_icon_name("computer-symbolic");
     sys_icon.set_pixel_size(24);
     sys_icon.add_css_class("theme-card-icon");
-    let sys_label = Label::builder().label(&t!("settings.theme_auto")).css_classes(["theme-card-label"]).build();
+    let sys_label = Label::builder()
+        .label(&t!("settings.theme_auto"))
+        .css_classes(["theme-card-label"])
+        .build();
     sys_card.append(&sys_icon);
     sys_card.append(&sys_label);
 
@@ -599,7 +642,10 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let light_icon = Image::from_icon_name("weather-clear-symbolic");
     light_icon.set_pixel_size(24);
     light_icon.add_css_class("theme-card-icon");
-    let light_label = Label::builder().label(&t!("settings.theme_light")).css_classes(["theme-card-label"]).build();
+    let light_label = Label::builder()
+        .label(&t!("settings.theme_light"))
+        .css_classes(["theme-card-label"])
+        .build();
     light_card.append(&light_icon);
     light_card.append(&light_label);
 
@@ -610,7 +656,10 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let dark_icon = Image::from_icon_name("weather-clear-night-symbolic");
     dark_icon.set_pixel_size(24);
     dark_icon.add_css_class("theme-card-icon");
-    let dark_label = Label::builder().label(&t!("settings.theme_dark")).css_classes(["theme-card-label"]).build();
+    let dark_label = Label::builder()
+        .label(&t!("settings.theme_dark"))
+        .css_classes(["theme-card-label"])
+        .build();
     dark_card.append(&dark_icon);
     dark_card.append(&dark_label);
 
@@ -678,7 +727,10 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let card2 = GtkBox::new(Orientation::Vertical, 0);
     card2.add_css_class("settings-card");
 
-    card2.append(&make_section_title_with_icon("computer-symbolic", &t!("settings.performance")));
+    card2.append(&make_section_title_with_icon(
+        "computer-symbolic",
+        &t!("settings.performance"),
+    ));
     card2.append(&make_section_subtitle(&t!("settings.tab_suspension_desc")));
 
     let susp_row = GtkBox::new(Orientation::Horizontal, 0);
@@ -723,7 +775,9 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let s_mgr_short = settings_mgr.clone();
     short_switch.connect_active_notify(move |sw| {
         let val = sw.is_active();
-        s_mgr_short.update(|s| s.show_shortcuts_on_newtab = val).ok();
+        s_mgr_short
+            .update(|s| s.show_shortcuts_on_newtab = val)
+            .ok();
     });
 
     shortcuts_row.append(&shortcuts_info);
@@ -763,8 +817,12 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let all_mb1 = all_mode_btns.clone();
     let icon_label_btn_c = icon_label_btn.clone();
     icon_label_btn.connect_clicked(move |_| {
-        s_mgr_mlbl.update(|s| s.shortcut_display_mode = ShortcutDisplayMode::IconAndLabel).ok();
-        for b in &all_mb1 { b.remove_css_class("active"); }
+        s_mgr_mlbl
+            .update(|s| s.shortcut_display_mode = ShortcutDisplayMode::IconAndLabel)
+            .ok();
+        for b in &all_mb1 {
+            b.remove_css_class("active");
+        }
         icon_label_btn_c.add_css_class("active");
     });
 
@@ -772,8 +830,12 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let all_mb2 = all_mode_btns.clone();
     let icon_only_btn_c = icon_only_btn.clone();
     icon_only_btn.connect_clicked(move |_| {
-        s_mgr_mico.update(|s| s.shortcut_display_mode = ShortcutDisplayMode::IconOnly).ok();
-        for b in &all_mb2 { b.remove_css_class("active"); }
+        s_mgr_mico
+            .update(|s| s.shortcut_display_mode = ShortcutDisplayMode::IconOnly)
+            .ok();
+        for b in &all_mb2 {
+            b.remove_css_class("active");
+        }
         icon_only_btn_c.add_css_class("active");
     });
 
@@ -790,8 +852,13 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let card_short_mgr = GtkBox::new(Orientation::Vertical, 0);
     card_short_mgr.add_css_class("settings-card");
 
-    card_short_mgr.append(&make_section_title_with_icon("bookmarks-symbolic", &t!("settings.manage_shortcuts")));
-    card_short_mgr.append(&make_section_subtitle(&t!("settings.manage_shortcuts_desc")));
+    card_short_mgr.append(&make_section_title_with_icon(
+        "bookmarks-symbolic",
+        &t!("settings.manage_shortcuts"),
+    ));
+    card_short_mgr.append(&make_section_subtitle(&t!(
+        "settings.manage_shortcuts_desc"
+    )));
 
     let shortcuts_list_box = GtkBox::new(Orientation::Vertical, 6);
     shortcuts_list_box.set_margin_top(10);
@@ -810,7 +877,11 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
             }
 
             let bookmarks = storage_mgr_c.list_bookmarks().unwrap_or_default();
-            let scoped: Vec<_> = bookmarks.iter().filter(|b| b.folder == "shortcuts").cloned().collect();
+            let scoped: Vec<_> = bookmarks
+                .iter()
+                .filter(|b| b.folder == "shortcuts")
+                .cloned()
+                .collect();
 
             if scoped.is_empty() {
                 let empty_lbl = Label::builder()
@@ -856,7 +927,10 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
                     .css_classes(["settings-pill"])
                     .build();
 
-                let popover = Popover::builder().has_arrow(true).position(gtk4::PositionType::Left).build();
+                let popover = Popover::builder()
+                    .has_arrow(true)
+                    .position(gtk4::PositionType::Left)
+                    .build();
                 let pop_content = GtkBox::new(Orientation::Vertical, 10);
                 pop_content.set_margin_top(14);
                 pop_content.set_margin_bottom(14);
@@ -901,13 +975,22 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
                     let url = ed_url.text().trim().to_string();
                     let icon = ed_icon.text().trim().to_string();
                     if !title.is_empty() && !url.is_empty() {
-                        let clean_url = if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("brunya://") {
+                        let clean_url = if url.starts_with("http://")
+                            || url.starts_with("https://")
+                            || url.starts_with("brunya://")
+                        {
                             url
                         } else {
                             format!("https://{}", url)
                         };
-                        let icon_opt = if icon.is_empty() { None } else { Some(icon.as_str()) };
-                        st_mgr_edit.update_bookmark(bm_id, &clean_url, &title, icon_opt).ok();
+                        let icon_opt = if icon.is_empty() {
+                            None
+                        } else {
+                            Some(icon.as_str())
+                        };
+                        st_mgr_edit
+                            .update_bookmark(bm_id, &clean_url, &title, icon_opt)
+                            .ok();
                         popover_c.popdown();
                         if let Some(ref f) = *rebuilt_ptr_e.borrow() {
                             f();
@@ -970,8 +1053,13 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let card3 = GtkBox::new(Orientation::Vertical, 0);
     card3.add_css_class("settings-card");
 
-    card3.append(&make_section_title_with_icon("security-high-symbolic", &t!("settings.privacy_and_security")));
-    card3.append(&make_section_subtitle("Controles de proteção de dados e privacidade"));
+    card3.append(&make_section_title_with_icon(
+        "security-high-symbolic",
+        &t!("settings.privacy_and_security"),
+    ));
+    card3.append(&make_section_subtitle(
+        "Controles de proteção de dados e privacidade",
+    ));
 
     // ── Cookies de terceiros ──
     let cookie_row = GtkBox::new(Orientation::Horizontal, 0);
@@ -1034,10 +1122,22 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let dns_btn_box = GtkBox::new(Orientation::Horizontal, 8);
     dns_btn_box.set_margin_top(10);
 
-    let sys_dns_btn = Button::builder().label(&t!("settings.dns_system")).css_classes(["dns-pill"]).build();
-    let cf_btn = Button::builder().label("Cloudflare").css_classes(["dns-pill"]).build();
-    let quad9_btn = Button::builder().label("Quad9").css_classes(["dns-pill"]).build();
-    let google_btn = Button::builder().label("Google").css_classes(["dns-pill"]).build();
+    let sys_dns_btn = Button::builder()
+        .label(&t!("settings.dns_system"))
+        .css_classes(["dns-pill"])
+        .build();
+    let cf_btn = Button::builder()
+        .label("Cloudflare")
+        .css_classes(["dns-pill"])
+        .build();
+    let quad9_btn = Button::builder()
+        .label("Quad9")
+        .css_classes(["dns-pill"])
+        .build();
+    let google_btn = Button::builder()
+        .label("Google")
+        .css_classes(["dns-pill"])
+        .build();
 
     // Marcar DNS ativo
     let current_dns = settings_mgr.get().secure_dns_mode;
@@ -1046,7 +1146,7 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
         brunya_settings::SecureDnsMode::Cloudflare => cf_btn.add_css_class("active"),
         brunya_settings::SecureDnsMode::Quad9 => quad9_btn.add_css_class("active"),
         brunya_settings::SecureDnsMode::Google => google_btn.add_css_class("active"),
-        brunya_settings::SecureDnsMode::Custom => {},
+        brunya_settings::SecureDnsMode::Custom => {}
     }
 
     // Helper para atualizar botões DNS
@@ -1062,8 +1162,12 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let s_mgr_sys = settings_mgr.clone();
     let sys_btn = sys_dns_btn.clone();
     sys_dns_btn.connect_clicked(move |_| {
-        s_mgr_sys.update(|s| s.secure_dns_mode = brunya_settings::SecureDnsMode::System).ok();
-        for b in &all_c { b.remove_css_class("active"); }
+        s_mgr_sys
+            .update(|s| s.secure_dns_mode = brunya_settings::SecureDnsMode::System)
+            .ok();
+        for b in &all_c {
+            b.remove_css_class("active");
+        }
         sys_btn.add_css_class("active");
     });
 
@@ -1072,8 +1176,12 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let s_mgr_cf = settings_mgr.clone();
     let cf_btn_c = cf_btn.clone();
     cf_btn.connect_clicked(move |_| {
-        s_mgr_cf.update(|s| s.secure_dns_mode = brunya_settings::SecureDnsMode::Cloudflare).ok();
-        for b in &all_c { b.remove_css_class("active"); }
+        s_mgr_cf
+            .update(|s| s.secure_dns_mode = brunya_settings::SecureDnsMode::Cloudflare)
+            .ok();
+        for b in &all_c {
+            b.remove_css_class("active");
+        }
         cf_btn_c.add_css_class("active");
     });
 
@@ -1082,8 +1190,12 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let s_mgr_q9 = settings_mgr.clone();
     let quad9_btn_c = quad9_btn.clone();
     quad9_btn.connect_clicked(move |_| {
-        s_mgr_q9.update(|s| s.secure_dns_mode = brunya_settings::SecureDnsMode::Quad9).ok();
-        for b in &all_c { b.remove_css_class("active"); }
+        s_mgr_q9
+            .update(|s| s.secure_dns_mode = brunya_settings::SecureDnsMode::Quad9)
+            .ok();
+        for b in &all_c {
+            b.remove_css_class("active");
+        }
         quad9_btn_c.add_css_class("active");
     });
 
@@ -1092,8 +1204,12 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let s_mgr_gg = settings_mgr.clone();
     let google_btn_c = google_btn.clone();
     google_btn.connect_clicked(move |_| {
-        s_mgr_gg.update(|s| s.secure_dns_mode = brunya_settings::SecureDnsMode::Google).ok();
-        for b in &all_c { b.remove_css_class("active"); }
+        s_mgr_gg
+            .update(|s| s.secure_dns_mode = brunya_settings::SecureDnsMode::Google)
+            .ok();
+        for b in &all_c {
+            b.remove_css_class("active");
+        }
         google_btn_c.add_css_class("active");
     });
 
@@ -1137,11 +1253,15 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let custom_entry_c = custom_entry.clone();
     apply_custom_btn.connect_clicked(move |_| {
         let url = custom_entry_c.text().trim().to_string();
-        sm_custom.update(|s| {
-            s.secure_dns_mode = brunya_settings::SecureDnsMode::Custom;
-            s.secure_dns_custom_url = url;
-        }).ok();
-        for b in &all_c2 { b.remove_css_class("active"); }
+        sm_custom
+            .update(|s| {
+                s.secure_dns_mode = brunya_settings::SecureDnsMode::Custom;
+                s.secure_dns_custom_url = url;
+            })
+            .ok();
+        for b in &all_c2 {
+            b.remove_css_class("active");
+        }
         dns_custom_active_c.set_visible(true);
     });
 
@@ -1151,11 +1271,15 @@ pub fn build_settings_view<F: Fn(Language) + 'static>(
     let sm_custom2 = settings_mgr.clone();
     custom_entry.connect_activate(move |entry| {
         let url = entry.text().trim().to_string();
-        sm_custom2.update(|s| {
-            s.secure_dns_mode = brunya_settings::SecureDnsMode::Custom;
-            s.secure_dns_custom_url = url;
-        }).ok();
-        for b in &all_c3 { b.remove_css_class("active"); }
+        sm_custom2
+            .update(|s| {
+                s.secure_dns_mode = brunya_settings::SecureDnsMode::Custom;
+                s.secure_dns_custom_url = url;
+            })
+            .ok();
+        for b in &all_c3 {
+            b.remove_css_class("active");
+        }
         dns_custom_active_c2.set_visible(true);
     });
 
@@ -1238,7 +1362,12 @@ pub fn build_history_view<F: Fn(&str) + 'static>(
         for item in history_items {
             let row = ActionRow::builder()
                 .title(&item.title)
-                .subtitle(&format!("{} • {} visitas • {}", item.url, item.visit_count, item.last_visit.format("%d/%m/%Y %H:%M")))
+                .subtitle(&format!(
+                    "{} • {} visitas • {}",
+                    item.url,
+                    item.visit_count,
+                    item.last_visit.format("%d/%m/%Y %H:%M")
+                ))
                 .activatable(true)
                 .build();
 
@@ -1248,7 +1377,11 @@ pub fn build_history_view<F: Fn(&str) + 'static>(
                 nav_cb(&target_url);
             });
 
-            row_widgets.borrow_mut().push((row.clone(), item.title.to_lowercase(), item.url.to_lowercase()));
+            row_widgets.borrow_mut().push((
+                row.clone(),
+                item.title.to_lowercase(),
+                item.url.to_lowercase(),
+            ));
             list_box.append(&row);
         }
         container.append(&list_box);
@@ -1556,15 +1689,16 @@ where
     header_box.add_css_class("settings-page-header");
 
     let title_box = GtkBox::new(Orientation::Horizontal, 8);
-    let title_icon = if let Some(texture) = toolbar_icon(libadwaita::StyleManager::default().is_dark()) {
-        let image = Image::from_paintable(Some(&texture));
-        image.set_pixel_size(26);
-        image
-    } else {
-        let image = Image::from_icon_name("application-x-addon");
-        image.set_pixel_size(26);
-        image
-    };
+    let title_icon =
+        if let Some(texture) = toolbar_icon(libadwaita::StyleManager::default().is_dark()) {
+            let image = Image::from_paintable(Some(&texture));
+            image.set_pixel_size(26);
+            image
+        } else {
+            let image = Image::from_icon_name("application-x-addon");
+            image.set_pixel_size(26);
+            image
+        };
     let title_lbl = Label::builder()
         .label(&t!("extensions.extensions_title"))
         .css_classes(["settings-title"])
@@ -1667,7 +1801,9 @@ where
                 let empty_box = GtkBox::new(Orientation::Vertical, 8);
                 empty_box.set_margin_top(24);
                 empty_box.set_halign(Align::Center);
-                let empty_icon = if let Some(texture) = toolbar_icon(libadwaita::StyleManager::default().is_dark()) {
+                let empty_icon = if let Some(texture) =
+                    toolbar_icon(libadwaita::StyleManager::default().is_dark())
+                {
                     Image::from_paintable(Some(&texture))
                 } else {
                     Image::from_icon_name("application-x-addon")
@@ -1749,23 +1885,36 @@ where
                 let rebuild_e = rebuild_list_fn.clone();
                 let on_changed_e = on_changed_list.clone();
                 enable_btn.connect_clicked(move |_| {
-                    if ext_sys_e.registry.get(&ext_id_clone).map(|e| e.state == ExtensionState::Disabled).unwrap_or(false) {
+                    if ext_sys_e
+                        .registry
+                        .get(&ext_id_clone)
+                        .map(|e| e.state == ExtensionState::Disabled)
+                        .unwrap_or(false)
+                    {
                         ext_sys_e.manager.enable_extension(&ext_id_clone).ok();
                     } else {
                         ext_sys_e.manager.disable_extension(&ext_id_clone).ok();
                     }
                     on_changed_e("refresh");
-                    if let Some(ref f) = *rebuild_e.borrow() { f(); }
+                    if let Some(ref f) = *rebuild_e.borrow() {
+                        f();
+                    }
                 });
                 let details_label = t!("extensions.details");
-                let details_btn = Button::builder().label(&details_label).css_classes(["settings-pill"]).build();
+                let details_btn = Button::builder()
+                    .label(&details_label)
+                    .css_classes(["settings-pill"])
+                    .build();
                 let ext_id_d = ext.id.clone();
                 let on_nav_d = on_nav.clone();
                 details_btn.connect_clicked(move |_| {
                     on_nav_d(&format!("brunya://extensions?id={}", ext_id_d.0));
                 });
                 let remove_label = t!("extensions.remove");
-                let remove_btn = Button::builder().label(&remove_label).css_classes(["settings-pill", "destructive-action"]).build();
+                let remove_btn = Button::builder()
+                    .label(&remove_label)
+                    .css_classes(["settings-pill", "destructive-action"])
+                    .build();
                 let ext_id_r = ext.id.clone();
                 let ext_sys_rm = ext_system_c.clone();
                 let rebuild_rm = rebuild_list_fn.clone();
@@ -1773,7 +1922,9 @@ where
                 remove_btn.connect_clicked(move |_| {
                     ext_sys_rm.manager.remove_extension(&ext_id_r).ok();
                     on_changed_rm("refresh");
-                    if let Some(ref f) = *rebuild_rm.borrow() { f(); }
+                    if let Some(ref f) = *rebuild_rm.borrow() {
+                        f();
+                    }
                 });
                 if !ext.permissions.is_empty() {
                     let perms_lbl = Label::builder()
@@ -1801,7 +1952,9 @@ where
     };
 
     *rebuild_list.borrow_mut() = Some(Box::new(rebuild_fn));
-    if let Some(ref f) = *rebuild_list.borrow() { f(); }
+    if let Some(ref f) = *rebuild_list.borrow() {
+        f();
+    }
 
     let ext_sys_load = ext_system.clone();
     let rebuild_load = rebuild_list.clone();
@@ -1828,10 +1981,17 @@ where
                                 if dir.join("manifest.json").exists() {
                                     match ext_sys.manager.install_from_directory(&dir) {
                                         Ok(info) => {
-                                            tracing::info!("Extensão carregada: {} v{}", info.name, info.version);
-                                            status_load.set_label(&t!("extensions.extension_installed"));
+                                            tracing::info!(
+                                                "Extensão carregada: {} v{}",
+                                                info.name,
+                                                info.version
+                                            );
+                                            status_load
+                                                .set_label(&t!("extensions.extension_installed"));
                                             on_changed_load(&format!("installed:{}", info.id.0));
-                                            if let Some(ref f) = *rebuild.borrow() { f(); }
+                                            if let Some(ref f) = *rebuild.borrow() {
+                                                f();
+                                            }
                                         }
                                         Err(e) => {
                                             status_load.set_label(&e.to_string());
@@ -1844,7 +2004,10 @@ where
                             }
                         }
                         Err(e) => {
-                            if !e.kind::<gio::IOErrorEnum>().is_some_and(|k| k == gio::IOErrorEnum::Cancelled) {
+                            if !e
+                                .kind::<gio::IOErrorEnum>()
+                                .is_some_and(|k| k == gio::IOErrorEnum::Cancelled)
+                            {
                                 tracing::warn!("Erro no seletor de pasta: {}", e);
                             }
                         }
@@ -1889,7 +2052,9 @@ where
                             refresh();
                         }
                     }
-                    StoreInstallEnd::Cancelled => status_done.set_label(&t!("extensions.store_hint")),
+                    StoreInstallEnd::Cancelled => {
+                        status_done.set_label(&t!("extensions.store_hint"))
+                    }
                     StoreInstallEnd::Failed => {}
                 }
             },
@@ -1937,16 +2102,26 @@ where
                     };
                     let detail = permission_text(&preview, "arquivo local");
                     let title = t!("extensions.install_confirm_title");
-                    confirm_install(Some(parent), title, detail, move || {
-                        match system.manager.install_from_bytes(&bytes, Some(&preview.id), InstallType::Normal) {
+                    confirm_install(
+                        Some(parent),
+                        title,
+                        detail,
+                        move || match system.manager.install_from_bytes(
+                            &bytes,
+                            Some(&preview.id),
+                            InstallType::Normal,
+                        ) {
                             Ok(info) => {
                                 status.set_label(&t!("extensions.extension_installed"));
                                 on_changed(&format!("installed:{}", info.id.0));
-                                if let Some(ref refresh) = *rebuild.borrow() { refresh(); }
+                                if let Some(ref refresh) = *rebuild.borrow() {
+                                    refresh();
+                                }
                             }
                             Err(err) => status.set_label(&err.to_string()),
-                        }
-                    }, || {});
+                        },
+                        || {},
+                    );
                 });
             }
         }
@@ -1998,12 +2173,15 @@ pub fn begin_store_install<S, F, W>(
     std::thread::spawn(move || {
         let _ = sender.send(download_store_package(&request));
     });
-    glib::timeout_add_local(std::time::Duration::from_millis(150), move || {
-        match receiver.try_recv() {
+    glib::timeout_add_local(
+        std::time::Duration::from_millis(150),
+        move || match receiver.try_recv() {
             Ok(Ok(package)) => {
                 let detail = permission_text(&package.preview, &package.store_name);
                 let title = t!("extensions.install_confirm_title");
-                let parent = anchor.root().and_then(|root| root.downcast::<gtk4::Window>().ok());
+                let parent = anchor
+                    .root()
+                    .and_then(|root| root.downcast::<gtk4::Window>().ok());
                 let bytes = package.bytes;
                 let extension_id = package.preview.id;
                 let system = system.clone();
@@ -2043,8 +2221,8 @@ pub fn begin_store_install<S, F, W>(
                 (&*on_finished)(StoreInstallEnd::Failed);
                 glib::ControlFlow::Break
             }
-        }
-    });
+        },
+    );
 }
 
 fn permission_text(preview: &brunya_extensions::loader::PackagePreview, source: &str) -> String {
@@ -2087,11 +2265,15 @@ fn confirm_install(
         .cancel_button(0)
         .default_button(1)
         .build();
-    dialog.choose(parent.as_ref(), None::<&gio::Cancellable>, move |response| {
-        if response == Ok(1) {
-            on_accept();
-        } else {
-            on_cancel();
-        }
-    });
+    dialog.choose(
+        parent.as_ref(),
+        None::<&gio::Cancellable>,
+        move |response| {
+            if response == Ok(1) {
+                on_accept();
+            } else {
+                on_cancel();
+            }
+        },
+    );
 }

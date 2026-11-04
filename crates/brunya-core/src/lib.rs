@@ -4,9 +4,9 @@
 //! controle de estado de navegação e traits do motor de navegação.
 
 pub mod error;
-pub mod types;
 pub mod traits;
+pub mod types;
 
 pub use error::{BrunyaError, Result};
-pub use types::*;
 pub use traits::*;
+pub use types::*;

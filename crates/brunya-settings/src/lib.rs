@@ -34,9 +34,9 @@ pub enum ThemePreference {
 pub enum SecureDnsMode {
     #[default]
     System,
-    Cloudflare,  // https://cloudflare-dns.com/dns-query (1.1.1.1)
-    Quad9,       // https://dns.quad9.net/dns-query (9.9.9.9)
-    Google,      // https://dns.google/dns-query (8.8.8.8)
+    Cloudflare, // https://cloudflare-dns.com/dns-query (1.1.1.1)
+    Quad9,      // https://dns.quad9.net/dns-query (9.9.9.9)
+    Google,     // https://dns.google/dns-query (8.8.8.8)
     Custom,
 }
 

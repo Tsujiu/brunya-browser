@@ -137,7 +137,8 @@ impl FilterListManager {
         // Escrever em arquivo temporário
         {
             let mut file = File::create(&temp_path).map_err(|e| e.to_string())?;
-            file.write_all(content.as_bytes()).map_err(|e| e.to_string())?;
+            file.write_all(content.as_bytes())
+                .map_err(|e| e.to_string())?;
             file.sync_all().map_err(|e| e.to_string())?;
         }
 
@@ -149,7 +150,10 @@ impl FilterListManager {
         // Troca atômica (rename)
         fs::rename(&temp_path, &final_path).map_err(|e| e.to_string())?;
 
-        let rule_count = content.lines().filter(|l| !l.trim().is_empty() && !l.starts_with('!')).count();
+        let rule_count = content
+            .lines()
+            .filter(|l| !l.trim().is_empty() && !l.starts_with('!'))
+            .count();
 
         let meta = FilterListMetadata {
             id: list_id.to_string(),
@@ -165,7 +169,10 @@ impl FilterListManager {
             is_enabled: true,
         };
 
-        info!("Lista de filtros '{}' atualizada e verificada com sucesso ({} regras)", list_id, rule_count);
+        info!(
+            "Lista de filtros '{}' atualizada e verificada com sucesso ({} regras)",
+            list_id, rule_count
+        );
         Ok(meta)
     }
 
@@ -175,7 +182,10 @@ impl FilterListManager {
         let backup_path = self.storage_dir.join(format!("{}.txt.bak", list_id));
 
         if backup_path.exists() {
-            warn!("Executando rollback de segurança para lista de filtros '{}'", list_id);
+            warn!(
+                "Executando rollback de segurança para lista de filtros '{}'",
+                list_id
+            );
             fs::copy(&backup_path, &final_path).map_err(|e| e.to_string())?;
             Ok(true)
         } else {
@@ -195,16 +205,23 @@ mod tests {
 
     #[test]
     fn test_atomic_filter_update_and_rollback() {
-        let temp_dir = std::env::temp_dir().join(format!("brunya_filters_test_{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)));
+        let temp_dir = std::env::temp_dir().join(format!(
+            "brunya_filters_test_{}",
+            Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        ));
         let mgr = FilterListManager::new(&temp_dir);
 
         let initial_content = "||adservice.google.com^\n||tracker.com^\n";
-        let meta1 = mgr.save_list_atomic("testlist", initial_content, None).unwrap();
+        let meta1 = mgr
+            .save_list_atomic("testlist", initial_content, None)
+            .unwrap();
         assert_eq!(meta1.rule_count, 2);
 
         // Nova versão
         let updated_content = "||adservice.google.com^\n||tracker.com^\n||evil-spyware.org^\n";
-        let meta2 = mgr.save_list_atomic("testlist", updated_content, None).unwrap();
+        let meta2 = mgr
+            .save_list_atomic("testlist", updated_content, None)
+            .unwrap();
         assert_eq!(meta2.rule_count, 3);
 
         // Testar rollback

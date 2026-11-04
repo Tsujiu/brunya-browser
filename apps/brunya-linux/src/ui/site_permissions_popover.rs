@@ -10,11 +10,7 @@ pub struct SitePermissionsPopover {
 }
 
 impl SitePermissionsPopover {
-    pub fn new(
-        storage_mgr: Arc<StorageManager>,
-        origin: String,
-        is_secure: bool,
-    ) -> Self {
+    pub fn new(storage_mgr: Arc<StorageManager>, origin: String, is_secure: bool) -> Self {
         let popover = Popover::new();
 
         let content = GtkBox::new(Orientation::Vertical, 12);
@@ -95,7 +91,9 @@ impl SitePermissionsPopover {
                     Some("Permitir") => PermissionState::Block,
                     _ => PermissionState::Ask,
                 };
-                st_clone.set_site_permission(&orig_clone, &perm_str, next_state).ok();
+                st_clone
+                    .set_site_permission(&orig_clone, &perm_str, next_state)
+                    .ok();
                 btn.set_label(match next_state {
                     PermissionState::Allow => "Permitir",
                     PermissionState::Block => "Bloquear",

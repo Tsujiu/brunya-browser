@@ -5,14 +5,17 @@ use tracing::warn;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
 pub enum MemoryPressureLevel {
     #[default]
-    Normal,   // Memória disponível > 20%
+    Normal, // Memória disponível > 20%
     Moderate, // Memória disponível entre 10% e 20% (sinaliza suspensão preventiva)
     Critical, // Memória disponível < 10% (suspensão agressiva imediata de abas inativas)
 }
 
 impl MemoryPressureLevel {
     pub fn is_under_pressure(&self) -> bool {
-        matches!(self, MemoryPressureLevel::Moderate | MemoryPressureLevel::Critical)
+        matches!(
+            self,
+            MemoryPressureLevel::Moderate | MemoryPressureLevel::Critical
+        )
     }
 }
 
@@ -64,11 +67,18 @@ impl SystemMemorySnapshot {
         }
 
         // Se MemAvailable não estiver disponível (kernels muito antigos), usa MemFree como aproximação
-        let effective_available = if available_kb > 0 { available_kb } else { free_kb };
+        let effective_available = if available_kb > 0 {
+            available_kb
+        } else {
+            free_kb
+        };
         let available_percent = (effective_available as f64 / total_kb as f64) * 100.0;
 
         let pressure_level = if available_percent < 10.0 {
-            warn!("Pressão crítica de memória detectada no sistema: {:.1}% disponível", available_percent);
+            warn!(
+                "Pressão crítica de memória detectada no sistema: {:.1}% disponível",
+                available_percent
+            );
             MemoryPressureLevel::Critical
         } else if available_percent < 20.0 {
             MemoryPressureLevel::Moderate
@@ -95,7 +105,10 @@ mod tests {
     #[test]
     fn test_memory_pressure_inspection() {
         let snapshot = SystemMemorySnapshot::current();
-        assert!(snapshot.is_some(), "Falha ao obter estado de memória de /proc/meminfo");
+        assert!(
+            snapshot.is_some(),
+            "Falha ao obter estado de memória de /proc/meminfo"
+        );
         let s = snapshot.unwrap();
         assert!(s.total_ram_kb > 0);
         assert!(s.available_ram_kb > 0);

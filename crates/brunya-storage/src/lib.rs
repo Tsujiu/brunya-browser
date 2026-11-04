@@ -317,7 +317,13 @@ impl StorageManager {
         Ok(conn.last_insert_rowid())
     }
 
-    pub fn add_bookmark_with_icon(&self, url: &str, title: &str, folder: &str, custom_icon: Option<&str>) -> Result<i64> {
+    pub fn add_bookmark_with_icon(
+        &self,
+        url: &str,
+        title: &str,
+        folder: &str,
+        custom_icon: Option<&str>,
+    ) -> Result<i64> {
         let conn = self.conn.lock();
         let now_ts = Utc::now().timestamp();
         conn.execute(
@@ -379,7 +385,13 @@ impl StorageManager {
         Ok(items)
     }
 
-    pub fn update_bookmark(&self, id: i64, url: &str, title: &str, custom_icon: Option<&str>) -> Result<bool> {
+    pub fn update_bookmark(
+        &self,
+        id: i64,
+        url: &str,
+        title: &str,
+        custom_icon: Option<&str>,
+    ) -> Result<bool> {
         let conn = self.conn.lock();
         let rows = conn.execute(
             "UPDATE bookmarks SET url = ?1, title = ?2, custom_icon = ?3 WHERE id = ?4",
@@ -413,7 +425,12 @@ impl StorageManager {
         Ok(conn.last_insert_rowid())
     }
 
-    pub fn update_download_progress(&self, id: i64, downloaded: i64, state: DownloadState) -> Result<()> {
+    pub fn update_download_progress(
+        &self,
+        id: i64,
+        downloaded: i64,
+        state: DownloadState,
+    ) -> Result<()> {
         let conn = self.conn.lock();
         conn.execute(
             "UPDATE downloads SET downloaded_bytes = ?1, state = ?2 WHERE id = ?3",
@@ -465,7 +482,12 @@ impl StorageManager {
 
     // --- Permissões por Site ---
 
-    pub fn set_site_permission(&self, origin: &str, permission: &str, state: PermissionState) -> Result<()> {
+    pub fn set_site_permission(
+        &self,
+        origin: &str,
+        permission: &str,
+        state: PermissionState,
+    ) -> Result<()> {
         let conn = self.conn.lock();
         conn.execute(
             "INSERT INTO site_permissions (origin, permission, state)
@@ -532,20 +554,28 @@ mod tests {
         let db = StorageManager::open_in_memory().expect("Falha ao abrir SQLite em memória");
 
         // Histórico
-        db.record_history_visit("https://linuxmint.com", "Linux Mint Home").unwrap();
-        db.record_history_visit("https://linuxmint.com", "Linux Mint Home").unwrap();
-        db.record_history_visit("https://rust-lang.org", "Rust").unwrap();
+        db.record_history_visit("https://linuxmint.com", "Linux Mint Home")
+            .unwrap();
+        db.record_history_visit("https://linuxmint.com", "Linux Mint Home")
+            .unwrap();
+        db.record_history_visit("https://rust-lang.org", "Rust")
+            .unwrap();
 
         let hist = db.get_recent_history(10).unwrap();
         assert_eq!(hist.len(), 2);
         let urls: Vec<String> = hist.iter().map(|h| h.url.clone()).collect();
         assert!(urls.contains(&"https://rust-lang.org".to_string()));
         assert!(urls.contains(&"https://linuxmint.com".to_string()));
-        let mint = hist.iter().find(|h| h.url == "https://linuxmint.com").unwrap();
+        let mint = hist
+            .iter()
+            .find(|h| h.url == "https://linuxmint.com")
+            .unwrap();
         assert_eq!(mint.visit_count, 2);
 
         // Favoritos
-        let bm_id = db.add_bookmark("https://kernel.org", "Linux Kernel", "Tech").unwrap();
+        let bm_id = db
+            .add_bookmark("https://kernel.org", "Linux Kernel", "Tech")
+            .unwrap();
         let bookmarks = db.list_bookmarks().unwrap();
         assert_eq!(bookmarks.len(), 1);
         assert_eq!(bookmarks[0].url, "https://kernel.org");
@@ -554,14 +584,17 @@ mod tests {
         assert_eq!(db.list_bookmarks().unwrap().len(), 0);
 
         // Downloads
-        let dl_id = db.add_download(
-            "https://kernel.org/linux-6.12.tar.xz",
-            "linux-6.12.tar.xz",
-            "/home/user/Downloads/linux-6.12.tar.xz",
-            145000000,
-        ).unwrap();
+        let dl_id = db
+            .add_download(
+                "https://kernel.org/linux-6.12.tar.xz",
+                "linux-6.12.tar.xz",
+                "/home/user/Downloads/linux-6.12.tar.xz",
+                145000000,
+            )
+            .unwrap();
 
-        db.update_download_progress(dl_id, 145000000, DownloadState::Completed).unwrap();
+        db.update_download_progress(dl_id, 145000000, DownloadState::Completed)
+            .unwrap();
         let downloads = db.list_downloads(10).unwrap();
         assert_eq!(downloads.len(), 1);
         assert_eq!(downloads[0].state, DownloadState::Completed);
@@ -571,13 +604,16 @@ mod tests {
         assert_eq!(db.list_downloads(10).unwrap().len(), 0);
 
         // Permissões
-        db.set_site_permission("https://meet.jit.si", "camera", PermissionState::Allow).unwrap();
+        db.set_site_permission("https://meet.jit.si", "camera", PermissionState::Allow)
+            .unwrap();
         assert_eq!(
-            db.get_site_permission("https://meet.jit.si", "camera").unwrap(),
+            db.get_site_permission("https://meet.jit.si", "camera")
+                .unwrap(),
             PermissionState::Allow
         );
         assert_eq!(
-            db.get_site_permission("https://meet.jit.si", "microphone").unwrap(),
+            db.get_site_permission("https://meet.jit.si", "microphone")
+                .unwrap(),
             PermissionState::Ask
         );
     }

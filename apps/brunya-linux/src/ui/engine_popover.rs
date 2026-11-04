@@ -1,8 +1,8 @@
 use brunya_settings::search_engines::{SearchEngineDef, ALL_SEARCH_ENGINES};
 use gtk4::prelude::*;
 use gtk4::{
-    Align, Box as GtkBox, Entry, Image, Label, ListBox, Orientation, Popover,
-    ScrolledWindow, SelectionMode,
+    Align, Box as GtkBox, Entry, Image, Label, ListBox, Orientation, Popover, ScrolledWindow,
+    SelectionMode,
 };
 use libadwaita::prelude::*;
 use libadwaita::ActionRow;
@@ -13,7 +13,10 @@ pub fn get_engine_icon(engine_id: &str) -> gtk4::Widget {
     // 1. Verificar caminhos locais no sistema ou desenvolvimento
     let home = std::env::var("HOME").unwrap_or_default();
     let candidates = [
-        format!("{}/.local/share/brunya/icons/engines/{}.png", home, engine_id),
+        format!(
+            "{}/.local/share/brunya/icons/engines/{}.png",
+            home, engine_id
+        ),
         format!("/usr/share/brunya-browser/icons/engines/{}.png", engine_id),
         format!("assets/icons/engines/{}.png", engine_id),
     ];
@@ -33,7 +36,10 @@ pub fn get_engine_icon(engine_id: &str) -> gtk4::Widget {
     // Fallback elegante para texto com glifo
     let def = brunya_settings::search_engines::get_engine_by_id(engine_id);
     let glyph = def.map(|d| d.glyph).unwrap_or("🔍");
-    let lbl = Label::builder().label(glyph).css_classes(["bold", "caption"]).build();
+    let lbl = Label::builder()
+        .label(glyph)
+        .css_classes(["bold", "caption"])
+        .build();
     lbl.upcast()
 }
 

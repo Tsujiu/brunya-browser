@@ -1,7 +1,7 @@
-use brunya_extensions::ExtensionSystem;
 use crate::window::BrunyaWindow;
 use brunya_adblock::AdblockEngine;
 use brunya_diagnostics::{MemoryPressureLevel, SystemMemorySnapshot};
+use brunya_extensions::ExtensionSystem;
 use brunya_i18n::{t, I18nManager, Language};
 use brunya_settings::{SettingsManager, ThemePreference};
 use brunya_storage::StorageManager;
@@ -36,7 +36,8 @@ impl BrunyaApp {
         let data_dir = dirs_or_fallback();
         let db_path = data_dir.join("brunya.db");
         let storage_manager = Arc::new(
-            StorageManager::open(&db_path).unwrap_or_else(|_| StorageManager::open_in_memory().unwrap()),
+            StorageManager::open(&db_path)
+                .unwrap_or_else(|_| StorageManager::open_in_memory().unwrap()),
         );
 
         // Inicializar configurações em ~/.config/brunya/settings.json
@@ -102,9 +103,15 @@ impl BrunyaApp {
             let theme = sm.get().theme;
             let style_mgr = libadwaita::StyleManager::default();
             match theme {
-                ThemePreference::Light => style_mgr.set_color_scheme(libadwaita::ColorScheme::ForceLight),
-                ThemePreference::Dark => style_mgr.set_color_scheme(libadwaita::ColorScheme::ForceDark),
-                ThemePreference::System => style_mgr.set_color_scheme(libadwaita::ColorScheme::Default),
+                ThemePreference::Light => {
+                    style_mgr.set_color_scheme(libadwaita::ColorScheme::ForceLight)
+                }
+                ThemePreference::Dark => {
+                    style_mgr.set_color_scheme(libadwaita::ColorScheme::ForceDark)
+                }
+                ThemePreference::System => {
+                    style_mgr.set_color_scheme(libadwaita::ColorScheme::Default)
+                }
             }
         });
 

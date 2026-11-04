@@ -5,10 +5,7 @@ use crate::errors::{ExtensionError, Result};
 use crate::manifest::{Manifest, ManifestValidation};
 use crate::permissions::PermissionSet;
 use crate::registry::ExtensionRegistry;
-use crate::types::{
-    ExtensionId, ExtensionInfo,
-    ExtensionState, InstallType,
-};
+use crate::types::{ExtensionId, ExtensionInfo, ExtensionState, InstallType};
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
 
@@ -29,22 +26,25 @@ impl PackageVerifier {
     /// Verifica a estrutura básica de um diretório de extensão.
     pub fn verify_directory(dir: &Path) -> Result<()> {
         if !dir.exists() {
-            return Err(ExtensionError::NotFound(
-                format!("Diretório não encontrado: {}", dir.display()),
-            ));
+            return Err(ExtensionError::NotFound(format!(
+                "Diretório não encontrado: {}",
+                dir.display()
+            )));
         }
 
         if !dir.is_dir() {
-            return Err(ExtensionError::InvalidManifest(
-                format!("Caminho não é um diretório: {}", dir.display()),
-            ));
+            return Err(ExtensionError::InvalidManifest(format!(
+                "Caminho não é um diretório: {}",
+                dir.display()
+            )));
         }
 
         let manifest_path = dir.join("manifest.json");
         if !manifest_path.exists() {
-            return Err(ExtensionError::ManifestNotFound(
-                format!("manifest.json não encontrado em {}", dir.display()),
-            ));
+            return Err(ExtensionError::ManifestNotFound(format!(
+                "manifest.json não encontrado em {}",
+                dir.display()
+            )));
         }
 
         Ok(())
@@ -76,9 +76,10 @@ impl PackageVerifier {
         // Verificar versão CRX
         let version = u32::from_le_bytes([data[4], data[5], data[6], data[7]]);
         if version < 2 || version > 3 {
-            return Err(ExtensionError::InvalidSignature(
-                format!("Versão CRX não suportada: {}", version),
-            ));
+            return Err(ExtensionError::InvalidSignature(format!(
+                "Versão CRX não suportada: {}",
+                version
+            )));
         }
 
         Ok(())
@@ -134,12 +135,7 @@ impl ExtensionLoader {
         };
 
         // Criar ExtensionInfo
-        let info = manifest.to_extension_info(
-            ext_id,
-            dir,
-            InstallType::Unpacked,
-            state,
-        );
+        let info = manifest.to_extension_info(ext_id, dir, InstallType::Unpacked, state);
 
         Ok(LoadedExtension {
             info,
@@ -193,10 +189,13 @@ impl ExtensionLoader {
         let validation = manifest.validate();
         if !validation.is_valid {
             std::fs::remove_dir_all(&extract_dir).ok();
-            return Err(ExtensionError::InvalidManifest(validation.errors.join("; ")));
+            return Err(ExtensionError::InvalidManifest(
+                validation.errors.join("; "),
+            ));
         }
 
-        let info = manifest.to_extension_info(id, &extract_dir, install_type, ExtensionState::Active);
+        let info =
+            manifest.to_extension_info(id, &extract_dir, install_type, ExtensionState::Active);
         Ok(LoadedExtension {
             info,
             manifest,
@@ -248,19 +247,19 @@ impl ExtensionLoader {
 
         // Verificar características não suportadas
         if manifest.declarative_net_request.is_some() {
-            incompatibilities.push(
-                "declarativeNetRequest não está disponível nesta versão.".to_string(),
-            );
+            incompatibilities
+                .push("declarativeNetRequest não está disponível nesta versão.".to_string());
         }
-        if manifest.storage.as_ref().and_then(|s| s.managed_schema.as_ref()).is_some() {
-            incompatibilities.push(
-                "managed storage não está disponível nesta versão.".to_string(),
-            );
+        if manifest
+            .storage
+            .as_ref()
+            .and_then(|s| s.managed_schema.as_ref())
+            .is_some()
+        {
+            incompatibilities.push("managed storage não está disponível nesta versão.".to_string());
         }
         if manifest.native_messaging() {
-            incompatibilities.push(
-                "nativeMessaging não está disponível nesta versão.".to_string(),
-            );
+            incompatibilities.push("nativeMessaging não está disponível nesta versão.".to_string());
         }
 
         // Incluir warnings do manifesto como notas
@@ -318,7 +317,9 @@ pub fn inspect_package(bytes: &[u8], explicit_id: Option<&str>) -> Result<Packag
         let (manifest, _) = Manifest::load_from_dir(&dest)?;
         let validation = manifest.validate();
         if !validation.is_valid {
-            return Err(ExtensionError::InvalidManifest(validation.errors.join("; ")));
+            return Err(ExtensionError::InvalidManifest(
+                validation.errors.join("; "),
+            ));
         }
         let info = manifest.to_extension_info(
             ExtensionId::new(id.clone()),
@@ -343,7 +344,9 @@ pub fn sanitize_extension_id(id: &str) -> Result<String> {
     let id = id.trim().to_ascii_lowercase();
     let ok = id.len() >= 8
         && id.len() <= 128
-        && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-');
+        && id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-');
     if !ok {
         return Err(ExtensionError::InvalidUrl(format!(
             "Identificador de extensão inválido: {id}"
@@ -406,7 +409,9 @@ fn protobuf_public_key(buf: &[u8]) -> Option<Vec<u8>> {
         let field = (key >> 3) as u32;
         let wire = (key & 7) as u32;
         match wire {
-            0 => { read_varint(buf, &mut index)?; }
+            0 => {
+                read_varint(buf, &mut index)?;
+            }
             1 => index = index.checked_add(8)?,
             5 => index = index.checked_add(4)?,
             2 => {
@@ -469,9 +474,12 @@ fn zip_start(bytes: &[u8]) -> Result<usize> {
             }
             let pk_len = u32::from_le_bytes(bytes[8..12].try_into().unwrap()) as usize;
             let sig_len = u32::from_le_bytes(bytes[12..16].try_into().unwrap()) as usize;
-            16usize.checked_add(pk_len).and_then(|n| n.checked_add(sig_len)).ok_or_else(|| {
-                ExtensionError::CorruptPackage("Cabeçalho CRX2 inválido".to_string())
-            })?
+            16usize
+                .checked_add(pk_len)
+                .and_then(|n| n.checked_add(sig_len))
+                .ok_or_else(|| {
+                    ExtensionError::CorruptPackage("Cabeçalho CRX2 inválido".to_string())
+                })?
         }
         3 => {
             let header_len = u32::from_le_bytes(bytes[8..12].try_into().unwrap()) as usize;
@@ -501,9 +509,10 @@ fn extract_package(bytes: &[u8], dest: &Path) -> Result<()> {
     }
     let start = zip_start(bytes)?;
     std::fs::create_dir_all(dest)?;
-    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(&bytes[start..])).map_err(|err| {
-        ExtensionError::CorruptPackage(format!("Falha ao ler o ZIP da extensão: {err}"))
-    })?;
+    let mut archive =
+        zip::ZipArchive::new(std::io::Cursor::new(&bytes[start..])).map_err(|err| {
+            ExtensionError::CorruptPackage(format!("Falha ao ler o ZIP da extensão: {err}"))
+        })?;
     for index in 0..archive.len() {
         let mut file = archive.by_index(index).map_err(|err| {
             ExtensionError::CorruptPackage(format!("Falha ao ler entrada {index} do ZIP: {err}"))
@@ -558,15 +567,15 @@ fn hoist_single_root(dest: &Path) -> Result<()> {
 impl Manifest {
     fn native_messaging(&self) -> bool {
         self.permissions.contains(&"nativeMessaging".to_string())
-            || self.optional_permissions.contains(&"nativeMessaging".to_string())
+            || self
+                .optional_permissions
+                .contains(&"nativeMessaging".to_string())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::registry::ExtensionRegistry;
-    use std::sync::Arc;
 
     #[test]
     fn test_basic_crx_verification() {
@@ -576,7 +585,7 @@ mod tests {
         crx_data.extend_from_slice(&3u32.to_le_bytes()); // version
         crx_data.extend_from_slice(&0u32.to_le_bytes()); // header size
         crx_data.extend_from_slice(&0u32.to_le_bytes()); // CRX3 header length
-        // No ZIP data, but header validation should pass
+                                                         // No ZIP data, but header validation should pass
 
         let dir = tempfile::TempDir::new().unwrap();
         let crx_path = dir.path().join("test.crx");

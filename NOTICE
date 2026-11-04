@@ -1,0 +1,57 @@
+AVISOS DE TITULARIDADE E DE TERCEIROS
+Brunya Browser — NOTICE
+
+O código original deste repositório é do Brunya Browser Team
+<engineering@brunyabrowser.org>, com todos os direitos reservados,
+conforme a minuta em LICENSE. Este arquivo não concede permissões além
+dessa minuta.
+
+Identificações feitas na auditoria de 2026-11-02. Não é uma lista
+exaustiva de toda dependência transitiva. As licenças das crates estão
+no Cargo.lock e nos repositórios dos respectivos projetos.
+
+Código e dados de terceiros
+
+- GTK, Libadwaita, WebKitGTK, GLib e bibliotecas do sistema seguem as
+  licenças dos projetos upstream, em geral LGPL. O Brunya as utiliza
+  como bibliotecas do sistema. Esta minuta não as converte em código do
+  Brunya.
+- Crates Rust (gtk4, libadwaita, webkit6, serde, rusqlite, ureq, ring e
+  as demais do Cargo.lock) permanecem sob as licenças escolhidas por
+  seus autores. Há licenças permissivas conhecidas nesse conjunto, como
+  MIT, Apache-2.0, BSD e ISC. A licença do Brunya não as substitui.
+- O ícone de extensões em assets/icons/brunya-extensions.svg e
+  assets/icons/brunya-extensions-white.svg reproduz o desenho "extension"
+  dos Material Symbols, de titularidade do Google, distribuído sob a
+  Apache License 2.0. Essa licença vale para esse desenho. Não se
+  estende ao restante do Brunya Browser.
+- Os ícones em assets/icons/engines/ são marcas de terceiros, usadas
+  para identificar o mecanismo de busca de destino. Não foi localizada
+  autorização de marca para republicação. O titular do Brunya não
+  licencia essas marcas. Antes de manter o repositório público, vale
+  confirmar com advogado se a citação visual é aceitável ou se esses
+  arquivos devem sair.
+- O atualizador em crates/brunya-adblock pode baixar listas EasyList,
+  EasyPrivacy e listas regionais. Essas listas não estão copiadas neste
+  repositório. Os mantenedores as publicam sob termos próprios, entre
+  eles GPL-3.0 e CC BY-SA 3.0, conforme registrado no código do
+  atualizador. Baixar e redistribuir essas listas pode impor deveres
+  que a licença do Brunya não consegue afastar. Elas não devem ser
+  vendidas ou relicenciadas como se fossem código do Brunya.
+- As fontes Inter e Fraunces aparecem só como nomes em CSS, com
+  fallback do sistema. Os arquivos dessas fontes não estão no
+  repositório.
+
+Histórico
+
+Os commits até e14257b, marcados pela tag
+restore/antes-da-relicenca-publica, continham um arquivo LICENSE com o
+texto da Apache-2.0. O repositório era privado e o único colaborador
+registrado no GitHub era a conta Tsujiu. A troca de licença foi feita
+antes da primeira publicação. Um advogado deve avaliar se aquele texto,
+ainda visível no histórico, pode ser invocado por quem clonar um commit
+antigo.
+
+Os três commits mais antigos foram assinados como BEAR Browser Core
+Team <engineering@bearbrowser.org>. O histórico posterior usa Brunya
+Browser Core Team. Não há outro autor identificado na linha do Git.

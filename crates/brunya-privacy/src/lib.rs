@@ -57,7 +57,9 @@ impl PrivacyManager {
         }
 
         if let Some(ref storage) = self.storage {
-            storage.get_site_permission(origin, perm_str).unwrap_or(PermissionState::Ask)
+            storage
+                .get_site_permission(origin, perm_str)
+                .unwrap_or(PermissionState::Ask)
         } else {
             PermissionState::Ask
         }
@@ -95,7 +97,11 @@ mod tests {
         let priv_mgr = PrivacyManager::new(None, true);
         assert!(priv_mgr.is_private());
 
-        priv_mgr.set_permission("https://example.com", PermissionType::Camera, PermissionState::Allow);
+        priv_mgr.set_permission(
+            "https://example.com",
+            PermissionType::Camera,
+            PermissionState::Allow,
+        );
         assert_eq!(
             priv_mgr.get_permission("https://example.com", PermissionType::Camera),
             PermissionState::Allow

@@ -105,7 +105,12 @@ impl ExtensionRegistry {
     }
 
     /// Atualiza a versão de uma extensão (após update).
-    pub fn update_version(&self, id: &ExtensionId, new_version: &str, new_dir: PathBuf) -> Result<bool> {
+    pub fn update_version(
+        &self,
+        id: &ExtensionId,
+        new_version: &str,
+        new_dir: PathBuf,
+    ) -> Result<bool> {
         let updated = {
             let mut data = self.data.write();
             if let Some(ref mut info) = data.extensions.get_mut(&id.0) {
@@ -130,12 +135,7 @@ impl ExtensionRegistry {
 
     /// Lista todas as extensões registradas.
     pub fn list_all(&self) -> Vec<ExtensionInfo> {
-        self.data
-            .read()
-            .extensions
-            .values()
-            .cloned()
-            .collect()
+        self.data.read().extensions.values().cloned().collect()
     }
 
     /// Lista extensões por estado.

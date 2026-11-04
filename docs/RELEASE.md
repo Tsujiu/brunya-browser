@@ -13,7 +13,7 @@ O script `scripts/build-deb.sh` automatiza todo o processo de construção em am
    - `/usr/bin/brunya-browser`: Binário stripped.
    - `/usr/share/applications/brunya-browser.desktop`: Metadados do desktop e suporte a ações rápidas.
    - `/usr/share/icons/hicolor/scalable/apps/brunya-browser.svg`: Ícone vetorial oficial.
-   - `/usr/share/doc/brunya-browser/copyright`: Atribuições de licença Apache-2.0.
+   - `/usr/share/doc/brunya-browser/copyright`: aviso de direitos reservados, conforme LICENSE.
    - `/usr/share/doc/brunya-browser/changelog.Debian.gz`: Histórico de versões comprimido.
    - `/usr/share/man/man1/brunya-browser.1.gz`: Manual do usuário do sistema.
 3. **Scripts de Controle (`DEBIAN/`):**

@@ -240,7 +240,11 @@ pub fn url_matches(pattern: &str, raw_url: &str) -> bool {
     if !host_matches(pat_host, host) {
         return false;
     }
-    let path = if url.path().is_empty() { "/" } else { url.path() };
+    let path = if url.path().is_empty() {
+        "/"
+    } else {
+        url.path()
+    };
     glob_match(&pat_path, path)
 }
 
@@ -250,7 +254,9 @@ fn host_matches(pattern: &str, host: &str) -> bool {
     }
     if let Some(suffix) = pattern.strip_prefix("*.") {
         return host.eq_ignore_ascii_case(suffix)
-            || host.to_ascii_lowercase().ends_with(&format!(".{suffix}").to_ascii_lowercase());
+            || host
+                .to_ascii_lowercase()
+                .ends_with(&format!(".{suffix}").to_ascii_lowercase());
     }
     pattern.eq_ignore_ascii_case(host)
 }
@@ -349,27 +355,41 @@ pub fn has_background(info: &ExtensionInfo) -> bool {
 pub fn best_icon_file(info: &ExtensionInfo) -> Option<PathBuf> {
     let mut candidates = Vec::new();
     if let Ok((manifest, _)) = Manifest::load_from_dir(&info.directory) {
-        for action in [manifest.action, manifest.browser_action, manifest.page_action]
-            .into_iter()
-            .flatten()
+        for action in [
+            manifest.action,
+            manifest.browser_action,
+            manifest.page_action,
+        ]
+        .into_iter()
+        .flatten()
         {
             if let Some(icons) = action.default_icon {
-                push_icons(&mut candidates, &info.directory, icons.into_iter().map(|(size, path)| {
-                    (size.parse::<i32>().unwrap_or(32), path)
-                }));
+                push_icons(
+                    &mut candidates,
+                    &info.directory,
+                    icons
+                        .into_iter()
+                        .map(|(size, path)| (size.parse::<i32>().unwrap_or(32), path)),
+                );
             }
         }
     }
     push_icons(
         &mut candidates,
         &info.directory,
-        info.icons.iter().map(|icon| (icon.size as i32, icon.path.clone())),
+        info.icons
+            .iter()
+            .map(|icon| (icon.size as i32, icon.path.clone())),
     );
     candidates.sort_by_key(|(size, _)| (*size - 32).abs());
     candidates.into_iter().next().map(|(_, path)| path)
 }
 
-fn push_icons(out: &mut Vec<(i32, PathBuf)>, base: &Path, icons: impl Iterator<Item = (i32, String)>) {
+fn push_icons(
+    out: &mut Vec<(i32, PathBuf)>,
+    base: &Path,
+    icons: impl Iterator<Item = (i32, String)>,
+) {
     for (size, relative) in icons {
         if let Ok(path) = resolve_extension_file(base, &relative) {
             if path.is_file() {
@@ -396,9 +416,15 @@ fn messages_json(dir: &Path) -> String {
     ]);
     for locale in locales {
         let path = dir.join("_locales").join(locale).join("messages.json");
-        let Ok(raw) = std::fs::read_to_string(path) else { continue };
-        let Ok(json) = serde_json::from_str::<serde_json::Value>(&raw) else { continue };
-        let Some(obj) = json.as_object() else { continue };
+        let Ok(raw) = std::fs::read_to_string(path) else {
+            continue;
+        };
+        let Ok(json) = serde_json::from_str::<serde_json::Value>(&raw) else {
+            continue;
+        };
+        let Some(obj) = json.as_object() else {
+            continue;
+        };
         let mut flat = serde_json::Map::new();
         for (key, value) in obj {
             if let Some(message) = value.get("message").and_then(|m| m.as_str()) {
@@ -433,11 +459,20 @@ mod tests {
     #[test]
     fn match_patterns() {
         assert!(url_matches("*://*/*", "https://example.com/a"));
-        assert!(url_matches("https://*.google.com/*", "https://www.google.com/search"));
+        assert!(url_matches(
+            "https://*.google.com/*",
+            "https://www.google.com/search"
+        ));
         assert!(url_matches("https://*.google.com/*", "https://google.com/"));
-        assert!(!url_matches("https://*.google.com/*", "http://www.google.com/"));
+        assert!(!url_matches(
+            "https://*.google.com/*",
+            "http://www.google.com/"
+        ));
         assert!(url_matches("<all_urls>", "https://example.com/"));
         assert!(!url_matches("<all_urls>", "brunya://extensions"));
-        assert!(url_matches("*://example.com/foo*", "https://example.com/foobar"));
+        assert!(url_matches(
+            "*://example.com/foo*",
+            "https://example.com/foobar"
+        ));
     }
 }

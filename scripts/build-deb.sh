@@ -67,12 +67,12 @@ Source: https://github.com/Tsujiu/brunya-browser
 
 Files: *
 Copyright: 2026 Brunya Browser Team <engineering@brunyabrowser.org>
-License: Apache-2.0
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
- .
- http://www.apache.org/licenses/LICENSE-2.0
+License: LicenseRef-Brunya-All-Rights-Reserved
+ Código público para consulta. Todos os direitos reservados.
+ A minuta está em LICENSE, na raiz do código-fonte upstream.
+ Sem autorização escrita, não é permitido redistribuir, comercializar
+ ou criar obra derivada. Dependências de terceiros seguem as licenças
+ dos respectivos titulares.
 EOF
 chmod 644 "$STAGING_DIR/usr/share/doc/brunya-browser/copyright"
 

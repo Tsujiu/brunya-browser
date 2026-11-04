@@ -14,7 +14,9 @@ pub fn resolve_extension_file(base: &Path, relative: &str) -> Result<PathBuf> {
     }
     let rel = Path::new(relative);
     if rel.is_absolute()
-        || rel.components().any(|c| matches!(c, Component::ParentDir | Component::Prefix(_)))
+        || rel
+            .components()
+            .any(|c| matches!(c, Component::ParentDir | Component::Prefix(_)))
     {
         return Err(ExtensionError::InvalidManifest(format!(
             "Caminho de extensão recusado: {relative}"

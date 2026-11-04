@@ -4,7 +4,7 @@
 //! O Brunya não republica o arquivo.
 
 use crate::errors::{ExtensionError, Result};
-use crate::loader::{inspect_package, PackagePreview, sanitize_extension_id};
+use crate::loader::{inspect_package, sanitize_extension_id, PackagePreview};
 use std::io::Read;
 
 const MAX_PACKAGE_BYTES: u64 = 64 * 1024 * 1024;
@@ -58,25 +58,33 @@ pub fn parse_store_input(input: &str) -> Result<StoreRequest> {
     let lower = input.to_ascii_lowercase();
     if lower.contains("chromewebstore.google.com") || lower.contains("chrome.google.com/webstore") {
         let id = find_store_id(input).ok_or_else(|| {
-            ExtensionError::InvalidUrl("Não encontrei o id da extensão nesse link do Chrome".to_string())
+            ExtensionError::InvalidUrl(
+                "Não encontrei o id da extensão nesse link do Chrome".to_string(),
+            )
         })?;
         return Ok(StoreRequest::Chrome { id });
     }
     if lower.contains("microsoftedge.microsoft.com") || lower.contains("edge.microsoft.com") {
         let id = find_store_id(input).ok_or_else(|| {
-            ExtensionError::InvalidUrl("Não encontrei o id da extensão nesse link do Edge".to_string())
+            ExtensionError::InvalidUrl(
+                "Não encontrei o id da extensão nesse link do Edge".to_string(),
+            )
         })?;
         return Ok(StoreRequest::Edge { id });
     }
     if lower.contains("addons.opera.com") {
         let slug = last_path_segment(input).ok_or_else(|| {
-            ExtensionError::InvalidUrl("Não encontrei o nome da extensão nesse link do Opera".to_string())
+            ExtensionError::InvalidUrl(
+                "Não encontrei o nome da extensão nesse link do Opera".to_string(),
+            )
         })?;
         return Ok(StoreRequest::Opera { slug });
     }
     if lower.contains("addons.mozilla.org") {
         let slug = segment_after(input, "addon").ok_or_else(|| {
-            ExtensionError::InvalidUrl("Não encontrei o nome da extensão nesse link do Firefox".to_string())
+            ExtensionError::InvalidUrl(
+                "Não encontrei o nome da extensão nesse link do Firefox".to_string(),
+            )
         })?;
         return Ok(StoreRequest::Firefox { slug });
     }
@@ -198,18 +206,30 @@ fn as_store_id(input: &str) -> Option<String> {
 }
 
 fn find_store_id(input: &str) -> Option<String> {
-    path_segments(input).into_iter().rev().find_map(|seg| as_store_id(&seg))
+    path_segments(input)
+        .into_iter()
+        .rev()
+        .find_map(|seg| as_store_id(&seg))
 }
 
 fn last_path_segment(input: &str) -> Option<String> {
-    path_segments(input).into_iter().rev().find(|seg| !seg.is_empty())
+    path_segments(input)
+        .into_iter()
+        .rev()
+        .find(|seg| !seg.is_empty())
 }
 
 fn segment_after(input: &str, marker: &str) -> Option<String> {
     let segments = path_segments(input);
-    let pos = segments.iter().position(|seg| seg.eq_ignore_ascii_case(marker))?;
+    let pos = segments
+        .iter()
+        .position(|seg| seg.eq_ignore_ascii_case(marker))?;
     let slug = segments.get(pos + 1)?;
-    if slug.is_empty() { None } else { Some(slug.clone()) }
+    if slug.is_empty() {
+        None
+    } else {
+        Some(slug.clone())
+    }
 }
 
 fn path_segments(input: &str) -> Vec<String> {
@@ -229,10 +249,13 @@ mod tests {
     fn parses_chrome_edge_opera_firefox_and_raw_id() {
         let chrome = parse_store_input(
             "https://chromewebstore.google.com/detail/dark-reader/eimadpbcbfnmbkopoojfekhnkhdbieeh",
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
             chrome,
-            StoreRequest::Chrome { id: "eimadpbcbfnmbkopoojfekhnkhdbieeh".into() }
+            StoreRequest::Chrome {
+                id: "eimadpbcbfnmbkopoojfekhnkhdbieeh".into()
+            }
         );
 
         let edge = parse_store_input(
@@ -240,26 +263,40 @@ mod tests {
         ).unwrap();
         assert!(matches!(edge, StoreRequest::Edge { .. }));
 
-        let opera = parse_store_input(
-            "https://addons.opera.com/en/extensions/details/dark-reader/",
-        ).unwrap();
-        assert_eq!(opera, StoreRequest::Opera { slug: "dark-reader".into() });
+        let opera =
+            parse_store_input("https://addons.opera.com/en/extensions/details/dark-reader/")
+                .unwrap();
+        assert_eq!(
+            opera,
+            StoreRequest::Opera {
+                slug: "dark-reader".into()
+            }
+        );
 
-        let firefox = parse_store_input(
-            "https://addons.mozilla.org/pt-BR/firefox/addon/darkreader/",
-        ).unwrap();
-        assert_eq!(firefox, StoreRequest::Firefox { slug: "darkreader".into() });
+        let firefox =
+            parse_store_input("https://addons.mozilla.org/pt-BR/firefox/addon/darkreader/")
+                .unwrap();
+        assert_eq!(
+            firefox,
+            StoreRequest::Firefox {
+                slug: "darkreader".into()
+            }
+        );
 
         let raw = parse_store_input("eimadpbcbfnmbkopoojfekhnkhdbieeh").unwrap();
         assert_eq!(
             raw,
-            StoreRequest::Chrome { id: "eimadpbcbfnmbkopoojfekhnkhdbieeh".into() }
+            StoreRequest::Chrome {
+                id: "eimadpbcbfnmbkopoojfekhnkhdbieeh".into()
+            }
         );
     }
 
     #[test]
     fn store_catalog_without_id_is_not_an_install() {
-        assert!(parse_store_input("https://chromewebstore.google.com/category/extensions").is_err());
+        assert!(
+            parse_store_input("https://chromewebstore.google.com/category/extensions").is_err()
+        );
         assert!(parse_store_input("https://chromewebstore.google.com/").is_err());
     }
 

@@ -2,7 +2,7 @@
 
 > **Rápido por engenharia, leve por arquitetura, privado por padrão.**
 
-O **Brunya Browser** é um navegador desktop moderno, open source e voltado para privacidade, projetado em **Rust** com interface nativa em **GTK4 + libadwaita** e motor baseado no ecossistema **Chromium / CEF (Chromium Embedded Framework)**.
+O **Brunya Browser** é um navegador desktop voltado para privacidade, projetado em **Rust** com interface nativa em **GTK4 + libadwaita** e motor WebKitGTK. O código é público para consulta. Não é código aberto: copiar, redistribuir, comercializar ou criar um projeto derivado depende da minuta em [LICENSE](LICENSE).
 
 Seu foco central é atingir **MÁXIMA VELOCIDADE + BAIXO CONSUMO DE MEMÓRIA RAM**, sem concessões à segurança, com bloqueador de anúncios integrado a nível de protocolo de rede e suporte oficial a **Português brasileiro (pt-BR)** e **Inglês (en)**.
 
@@ -90,7 +90,12 @@ cargo run -p brunya-linux -- "https://kernel.org"
 
 ---
 
-## 📜 Licença
+## Direitos autorais
 
-Código próprio distribuído sob a Licença **Apache-2.0**.
-Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
+Copyright 2026 Brunya Browser Team. Todos os direitos reservados.
+
+O repositório público permite ver o código, compilar para avaliação pessoal e não comercial, e abrir um Pull Request de volta para este projeto. Não autoriza espelho, fork independente, redistribuição nem uso comercial. A minuta está em [LICENSE](LICENSE). Avisos de terceiros estão em [NOTICE](NOTICE).
+
+Contribuição só entra com o aceite registrado da minuta em [CLA.md](CLA.md). As regras estão em [CONTRIBUTING.md](CONTRIBUTING.md). Vulnerabilidade segue [SECURITY.md](SECURITY.md).
+
+Esta documentação não é parecer jurídico. A minuta pede revisão por advogado.
