@@ -1,6 +1,8 @@
 use brunya_adblock::AdblockEngine;
 use brunya_core::traits::NetworkInterceptor;
 use brunya_core::types::{NavigationState, SecurityLevel, TabId};
+use brunya_extensions::store::{parse_store_input, StoreRequest};
+use brunya_extensions::types::ExtensionId;
 use brunya_extensions::ExtensionSystem;
 use brunya_i18n::t;
 use brunya_settings::SettingsManager;
@@ -23,6 +25,11 @@ pub struct WebView {
     internal_area: GtkBox,
     pub webkit_view: WebKitWebView,
     progress_bar: ProgressBar,
+    store_bar: GtkBox,
+    store_label: Label,
+    store_button: Button,
+    store_url: RefCell<Option<String>>,
+    store_busy: RefCell<bool>,
     current_state: RefCell<NavigationState>,
     pub current_favicon: RefCell<Option<gdk4::Texture>>,
     adblock: Arc<AdblockEngine>,
@@ -57,6 +64,22 @@ impl WebView {
             .visible(false)
             .build();
         container.append(&progress_bar);
+
+        let store_bar = GtkBox::new(Orientation::Horizontal, 12);
+        store_bar.add_css_class("store-install-bar");
+        store_bar.set_visible(false);
+        let store_label = Label::builder()
+            .halign(Align::Start)
+            .hexpand(true)
+            .wrap(true)
+            .css_classes(["store-install-label"])
+            .build();
+        let store_button = Button::builder()
+            .css_classes(["settings-pill", "suggested-action"])
+            .build();
+        store_bar.append(&store_label);
+        store_bar.append(&store_button);
+        container.append(&store_bar);
 
         let internal_area = GtkBox::new(Orientation::Vertical, 0);
         internal_area.set_vexpand(true);
@@ -127,6 +150,19 @@ impl WebView {
                 &[],
             );
             content_manager.add_script(&yt_user_script);
+            content_manager.add_script(&webkit6::UserScript::new(
+                STORE_HOOK_JS,
+                webkit6::UserContentInjectedFrames::AllFrames,
+                webkit6::UserScriptInjectionTime::Start,
+                &[
+                    "*://chromewebstore.google.com/*",
+                    "*://chrome.google.com/*",
+                    "*://microsoftedge.microsoft.com/*",
+                    "*://addons.mozilla.org/*",
+                    "*://addons.opera.com/*",
+                ],
+                &[],
+            ));
 
             // Carregar ou compilar o filtro de conteúdo nativo do WebKit
             let home = std::env::var("HOME").unwrap_or_default();
@@ -177,6 +213,11 @@ impl WebView {
             internal_area,
             webkit_view: webkit_view.clone(),
             progress_bar: progress_bar.clone(),
+            store_bar: store_bar.clone(),
+            store_label: store_label.clone(),
+            store_button: store_button.clone(),
+            store_url: RefCell::new(None),
+            store_busy: RefCell::new(false),
             current_state: RefCell::new(initial_state),
             current_favicon: RefCell::new(None),
             adblock: adblock.clone(),
@@ -290,9 +331,12 @@ impl WebView {
                 }
                 LoadEvent::Committed => {
                     if let Some(this) = this_load.upgrade() {
-                        if let (Some(bridge), Some(uri)) = (this.extension_bridge.clone(), v.uri()) {
-                            bridge.inject_content(&this.webkit_view, uri.as_str(), "document_start");
-                            bridge.inject_content(&this.webkit_view, uri.as_str(), "document_end");
+                        if let Some(uri) = v.uri() {
+                            this.sync_store_offer(uri.as_str());
+                            if let Some(bridge) = this.extension_bridge.clone() {
+                                bridge.inject_content(&this.webkit_view, uri.as_str(), "document_start");
+                                bridge.inject_content(&this.webkit_view, uri.as_str(), "document_end");
+                            }
                         }
                     }
                 }
@@ -332,6 +376,22 @@ impl WebView {
             false
         });
 
+        if let Some(manager) = webkit_view.user_content_manager() {
+            manager.register_script_message_handler("brunyaStore", None);
+            let this_store = Rc::downgrade(&view);
+            manager.connect_script_message_received(Some("brunyaStore"), move |_manager, value| {
+                if let Some(this) = this_store.upgrade() {
+                    this.on_store_message(value);
+                }
+            });
+        }
+        let this_store_btn = Rc::downgrade(&view);
+        store_button.connect_clicked(move |_| {
+            if let Some(this) = this_store_btn.upgrade() {
+                this.start_store_install();
+            }
+        });
+
         // Carregar página inicial
         view.load_url(default_start);
         view
@@ -341,9 +401,102 @@ impl WebView {
         self.current_state.borrow().clone()
     }
 
+    fn sync_store_offer(&self, url: &str) {
+        if self.extension_system.is_none() || !self.webkit_view.is_visible() {
+            self.store_bar.set_visible(false);
+            return;
+        }
+        let Ok(request) = parse_store_input(url) else {
+            self.store_bar.set_visible(false);
+            if !*self.store_busy.borrow() {
+                *self.store_url.borrow_mut() = None;
+            }
+            return;
+        };
+        *self.store_url.borrow_mut() = Some(url.to_string());
+        self.store_bar.set_visible(true);
+        if *self.store_busy.borrow() {
+            return;
+        }
+        let installed = self.store_already_installed(&request);
+        let label = if installed {
+            t!("extensions.store_bar_installed")
+        } else {
+            t!("extensions.store_bar_title", store => request.store_name())
+        };
+        let action = if installed {
+            t!("extensions.store_bar_reinstall")
+        } else {
+            t!("extensions.store_bar_action")
+        };
+        self.store_label.set_label(&label);
+        self.store_button.set_label(&action);
+        self.store_button.set_sensitive(true);
+    }
+
+    fn store_already_installed(&self, request: &StoreRequest) -> bool {
+        let Some(system) = &self.extension_system else { return false };
+        let Some(id) = request.explicit_id() else { return false };
+        system
+            .manager
+            .get_extension(&ExtensionId::new(id.to_string()))
+            .is_some()
+    }
+
+    fn start_store_install(self: &Rc<Self>) {
+        if *self.store_busy.borrow() {
+            return;
+        }
+        let Some(url) = self.store_url.borrow().clone() else { return };
+        let Some(system) = self.extension_system.clone() else { return };
+        *self.store_busy.borrow_mut() = true;
+        self.store_button.set_sensitive(false);
+        let this_status = Rc::clone(self);
+        let this_done = Rc::clone(self);
+        crate::ui::internal_views::begin_store_install(
+            url,
+            &self.store_button,
+            system,
+            move |status| this_status.store_label.set_label(&status),
+            move |end| {
+                *this_done.store_busy.borrow_mut() = false;
+                this_done.store_button.set_sensitive(true);
+                if matches!(end, crate::ui::internal_views::StoreInstallEnd::Installed(_)) {
+                    (this_done.on_extensions_changed)("refresh");
+                }
+                if this_done.webkit_view.is_visible() {
+                    if let Some(uri) = this_done.webkit_view.uri() {
+                        this_done.sync_store_offer(uri.as_str());
+                    }
+                } else {
+                    this_done.store_bar.set_visible(false);
+                }
+            },
+        );
+    }
+
+    fn on_store_message(self: &Rc<Self>, value: &webkit6::javascriptcore::Value) {
+        let raw = script_message_text(value);
+        let Ok(msg) = serde_json::from_str::<serde_json::Value>(&raw) else { return };
+        let Some(url) = msg.get("url").and_then(|value| value.as_str()) else { return };
+        if url.is_empty() {
+            return;
+        }
+        match msg.get("op").and_then(|value| value.as_str()).unwrap_or("") {
+            "page" => self.sync_store_offer(url),
+            "install" => {
+                *self.store_url.borrow_mut() = Some(url.to_string());
+                self.sync_store_offer(url);
+                self.start_store_install();
+            }
+            _ => {}
+        }
+    }
+
     pub fn load_url(self: &Rc<Self>, url: &str) {
         let mut clean_url = url.trim().to_string();
         info!("Aba {} navegando para: {}", self.tab_id, clean_url);
+        self.store_bar.set_visible(false);
 
         // 1. Módulo 08 — URL Cleaner (limpeza prévia de parâmetros invasivos de rastreamento)
         let (cleaned_url, stripped) = brunya_adblock::UrlCleaner::clean_url(&clean_url);
@@ -386,6 +539,7 @@ impl WebView {
         } else {
             self.internal_area.set_visible(false);
             self.webkit_view.set_visible(true);
+            self.sync_store_offer(&clean_url);
 
             // Carregar favicon do domínio antecipadamente do cache ou disparar fetch assíncrono
             if let Some(domain) = FaviconManager::extract_domain(&clean_url) {
@@ -502,6 +656,7 @@ impl WebView {
     }
 
     fn render_error_page(&self, url: &str, error_msg: &str) {
+        self.store_bar.set_visible(false);
         self.clear_internal_area();
         self.webkit_view.set_visible(false);
         self.internal_area.set_visible(true);
@@ -557,6 +712,7 @@ impl WebView {
         category: brunya_adblock::ThreatCategory,
         reason: &str,
     ) {
+        self.store_bar.set_visible(false);
         self.clear_internal_area();
         self.webkit_view.set_visible(false);
         self.internal_area.set_visible(true);
@@ -678,3 +834,174 @@ impl WebView {
         brunya_diagnostics::get_distinct_tab_memory_mb(tab_index, url, is_internal)
     }
 }
+
+fn script_message_text(value: &webkit6::javascriptcore::Value) -> String {
+    if let Some(json) = value.to_json(0) {
+        let text = json.to_string();
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&text) {
+            if let Some(inner) = parsed.as_str() {
+                return inner.to_string();
+            }
+            return text;
+        }
+    }
+    value.to_str().to_string()
+}
+
+const STORE_HOOK_JS: &str = r#"
+(() => {
+  if (window.__brunyaStoreHook) return;
+  window.__brunyaStoreHook = true;
+
+  const call = (callback, value) => {
+    if (typeof callback === "function") callback(value);
+  };
+  const post = (op) => {
+    try {
+      const bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.brunyaStore;
+      if (bridge) bridge.postMessage(JSON.stringify({ op: op, url: String(location.href) }));
+    } catch (e) {}
+  };
+  const chromeApi = window.chrome || {};
+  chromeApi.runtime = chromeApi.runtime || {
+    sendMessage() {},
+    connect() { return { onMessage: { addListener() {} }, postMessage() {}, disconnect() {} }; }
+  };
+  chromeApi.webstorePrivate = chromeApi.webstorePrivate || {
+    getExtensionStatus(id, manifest, callback) {
+      call(typeof manifest === "function" ? manifest : callback, "installable");
+    },
+    beginInstallWithManifest3(details, callback) {
+      post("install");
+      call(callback, "");
+    },
+    completeInstall(id, callback) { call(callback, ""); },
+    isInIncognitoMode(callback) { call(callback, false); },
+    getReferrerChain(callback) { call(callback, "EgIIAA=="); },
+    getBrowserLogin(callback) { call(callback); }
+  };
+  try { window.chrome = chromeApi; } catch (e) {}
+  if (!navigator.userAgentData) {
+    const brands = [
+      { brand: "Chromium", version: "143" },
+      { brand: "Google Chrome", version: "143" },
+      { brand: "Not_A Brand", version: "24" }
+    ];
+    const data = {
+      brands: brands,
+      mobile: false,
+      platform: "Linux",
+      getHighEntropyValues() {
+        return Promise.resolve({
+          brands: brands,
+          mobile: false,
+          platform: "Linux",
+          architecture: "x86",
+          bitness: "64",
+          model: "",
+          platformVersion: "6.8.0",
+          uaFullVersion: "143.0.7499.41",
+          fullVersionList: brands
+        });
+      }
+    };
+    try {
+      Object.defineProperty(navigator, "userAgentData", { configurable: true, get: () => data });
+    } catch (e) {}
+  }
+
+  if (window.top !== window) return;
+  let last = "";
+  const notify = () => {
+    const url = String(location.href);
+    if (url === last) return;
+    last = url;
+    const old = document.getElementById("brunya-store-install");
+    if (old) old.remove();
+    post("page");
+    scheduleButton();
+  };
+  const phrases = [
+    "add to chrome",
+    "adicionar ao chrome",
+    "usar no chrome",
+    "adicionar ao brunya",
+    "add to brunya",
+    "add to edge",
+    "adicionar ao edge",
+    "add to firefox",
+    "adicionar ao firefox",
+    "add to opera",
+    "adicionar ao opera"
+  ];
+  const unavailable = [
+    "item indisponível no momento",
+    "item currently unavailable",
+    "this item is not available",
+    "este item não está disponível"
+  ];
+  const isInstall = (value) => {
+    const text = String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+    if (!text || text.length > 80) return false;
+    return phrases.some((phrase) => text === phrase || text.startsWith(phrase));
+  };
+  let scheduled = false;
+  const scheduleButton = () => {
+    if (scheduled) return;
+    scheduled = true;
+    setTimeout(() => { scheduled = false; placeButton(); }, 250);
+  };
+  const placeButton = () => {
+    if (document.getElementById("brunya-store-install")) return;
+    if (!/[a-p]{32}/i.test(location.pathname)) return;
+    const body = document.body;
+    if (!body) return;
+    const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      const value = String(node.nodeValue || "").replace(/\s+/g, " ").trim().toLowerCase();
+      if (!unavailable.some((phrase) => value.includes(phrase))) continue;
+      const host = node.parentElement;
+      if (!host) return;
+      const button = document.createElement("button");
+      button.id = "brunya-store-install";
+      button.type = "button";
+      button.textContent = "Adicionar ao Brunya";
+      button.style.cssText = "display:inline-block;margin:12px 0;padding:10px 18px;border:0;border-radius:999px;background:#1a73e8;color:#fff;font:600 14px/1.2 system-ui,sans-serif;cursor:pointer;";
+      host.insertAdjacentElement("afterend", button);
+      return;
+    }
+  };
+  window.addEventListener("click", (event) => {
+    const path = event.composedPath ? event.composedPath() : [event.target];
+    for (const node of path) {
+      if (!node || node.nodeType !== 1) continue;
+      const aria = node.getAttribute ? (node.getAttribute("aria-label") || "") : "";
+      const own = node.innerText || node.textContent || "";
+      if (node.id === "brunya-store-install" || isInstall(aria) || isInstall(own)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        post("install");
+        return;
+      }
+    }
+  }, true);
+  const wrap = (name) => {
+    const original = history[name];
+    if (typeof original !== "function") return;
+    history[name] = function () {
+      const result = original.apply(this, arguments);
+      setTimeout(notify, 0);
+      return result;
+    };
+  };
+  wrap("pushState");
+  wrap("replaceState");
+  window.addEventListener("popstate", () => setTimeout(notify, 0));
+  const root = document.documentElement;
+  if (root) {
+    new MutationObserver(scheduleButton).observe(root, { childList: true, subtree: true });
+  }
+  notify();
+})();
+"#;

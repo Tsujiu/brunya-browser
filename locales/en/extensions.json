@@ -72,5 +72,10 @@
   "store_placeholder": "Chrome Web Store, Edge, Opera or Firefox link, or the extension id",
   "store_install": "Install from store",
   "store_installing": "Downloading extension…",
-  "store_hint": "Paste a store link. Brunya downloads the official package, shows the permissions and installs it."
+  "store_hint": "If the Chrome Web Store says the item is unavailable, use Add to Brunya. The official package is downloaded anyway.",
+  "open_store": "Open Chrome Web Store",
+  "store_bar_title": "The {store} may say this item is unavailable. Brunya still downloads the official package.",
+  "store_bar_installed": "This extension is already installed",
+  "store_bar_action": "Add to Brunya",
+  "store_bar_reinstall": "Reinstall"
 }

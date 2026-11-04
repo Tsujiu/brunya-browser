@@ -256,4 +256,23 @@ mod tests {
             StoreRequest::Chrome { id: "eimadpbcbfnmbkopoojfekhnkhdbieeh".into() }
         );
     }
+
+    #[test]
+    fn store_catalog_without_id_is_not_an_install() {
+        assert!(parse_store_input("https://chromewebstore.google.com/category/extensions").is_err());
+        assert!(parse_store_input("https://chromewebstore.google.com/").is_err());
+    }
+
+    #[test]
+    #[ignore = "baixa um CRX real da Chrome Web Store"]
+    fn downloads_dark_reader_from_chrome_store() {
+        let request = parse_store_input(
+            "https://chromewebstore.google.com/detail/dark-reader/eimadpbcbfnmbkopoojfekhnkhdbieeh",
+        )
+        .unwrap();
+        let package = download_store_package(&request).expect("download");
+        assert!(package.bytes.starts_with(b"Cr24") || package.bytes.starts_with(b"PK"));
+        assert!(package.preview.name.to_lowercase().contains("dark"));
+        assert_eq!(package.preview.id, "eimadpbcbfnmbkopoojfekhnkhdbieeh");
+    }
 }

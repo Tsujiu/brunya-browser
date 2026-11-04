@@ -722,3 +722,25 @@ window.light-theme .settings-page-header .settings-title {
 window.light-theme .settings-page-header .settings-subtitle {
     color: #78716c;
 }
+
+.store-install-bar {
+    padding: 8px 16px;
+    background-color: rgba(2, 132, 199, 0.18);
+    border-bottom: 1px solid rgba(56, 189, 248, 0.45);
+}
+
+.store-install-label {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: @brunya_text;
+}
+
+window.light-theme .store-install-bar {
+    background-color: rgba(2, 132, 199, 0.12);
+    border-bottom-color: rgba(2, 132, 199, 0.35);
+}
+
+window.light-theme .store-install-label {
+    color: #1c1917;
+}
