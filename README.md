@@ -26,7 +26,7 @@ Seu foco central é atingir **MÁXIMA VELOCIDADE + BAIXO CONSUMO DE MEMÓRIA RAM
 - **Sistema Operacional:** Linux Mint 22+, Ubuntu 24.04 LTS (ou distribuições Debian-based equivalentes).
 - **Arquitetura:** Linux x86-64 (suporte universal sem instruções AVX obrigatórias).
 - **Compilador Rust:** Rustc 1.85+ (testado e validado com Rustc 1.99.1).
-- **Bibliotecas:** `libgtk-4-dev` (4.14+), `libadwaita-1-dev` (1.5+), `libsqlite3-dev` (3.45+).
+- **Bibliotecas:** `libgtk-4-dev` (4.14+), `libadwaita-1-dev` (1.5+), `libwebkitgtk-6.0-dev`, `libsoup-3.0-dev`, `libsqlite3-dev` (3.45+).
 
 ---
 
@@ -43,7 +43,7 @@ cd brunya-browser
 ### 2. Instalar dependências no Linux Mint / Ubuntu
 ```bash
 sudo apt update
-sudo apt install -y build-essential libgtk-4-dev libadwaita-1-dev libsqlite3-dev clang
+sudo apt install -y build-essential libgtk-4-dev libadwaita-1-dev libwebkitgtk-6.0-dev libsoup-3.0-dev libjavascriptcoregtk-6.0-dev libsqlite3-dev clang
 ```
 
 ### 3. Executar a suíte de testes
