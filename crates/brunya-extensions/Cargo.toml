@@ -18,7 +18,7 @@ regex.workspace = true
 ring.workspace = true
 ureq.workspace = true
 glib.workspace = true
-zip = { version = "2", default-features = false, features = ["deflate"] }
+zip = { version = "9", default-features = false, features = ["deflate"] }
 
 brunya-core = { path = "../brunya-core" }
 brunya-storage = { path = "../brunya-storage" }
